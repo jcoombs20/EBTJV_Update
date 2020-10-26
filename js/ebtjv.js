@@ -10,24 +10,8 @@ function initPage() {
 
 
 
-  //******Remove created geoserver layers and zip files.
-  $(window).on('beforeunload', function(){
-    for (var i=0;i<rpccr_id.length;i++) {
-      input = {"ws":"ottawa", "cs": rpccr_id[i], "style": "onf_rpccr", "file_name": rpccr_id[i] + ".tif"};
-      socket.emit('delete_rpccr_data', input);
-    }
-/*
-    for (var x=0;x<download_id.length;x++) {
-      input = {"file_name": download_id[x]};
-      socket.emit('delete_download_data', input);
-    }
-*/
-  });
-
-
-
   map = new L.Map('map', {attributionControl: false, zoomControl: false, minZoom: 5, maxZoom: 19, inertiaDeceleration: 1000, worldCopyJump: true, maxBounds: [[75,-176],[0,-35]]});
-  map.fitBounds([[34,-85],[48,-66]]);
+  map.fitBounds([[35,-85],[47,-67]]);
 
   //******Watch events and get data from postgres when level is appropriate and add as SVG
   map.on("moveend", function(event) { d3.select("#map").style("cursor", ""); });
@@ -92,8 +76,170 @@ function initPage() {
     .attr("class", "header")
     .style("padding", "3px 0px 3px 15px")
     .style("height", "40px")
-    .html('<img id="titleImg" src="images/ebtjv_icon.png"></img><span class="brand">Catchment Updater</span> <div id="headerLinks"><a id="launchIntro" href="#" title="Click to launch introduction tutorial" onclick="startIntro()">Tutorial</a><a id="showDetails" title="Click to display informational details about this tool" href="#" data-toggle="modal" data-target="#helpDiv">About</a></div><div id="printDownload" class="pull-right"><span id="downloadControl" class="glyphicon glyphicon-download-alt" title="Download spatial data" onclick="toolWindowToggle(&quot;download&quot;)"></span><span id="printControl" class="fa fa-print" title="Print current map" onclick="window.print()"></span></div>');
+    .html('<img id="titleImg" src="images/ebtjv_icon.png"></img><span class="brand">EBTJV Catchment Updater</span> <div id="headerLinks"><a id="launchIntro" href="#" title="Click to launch introduction tutorial" onclick="startIntro()">Tutorial</a><a id="showDetails" title="Click to display informational details about this tool" href="#" data-toggle="modal" data-target="#helpDiv">About</a></div><div id="printDownload" class="pull-right"><span id="downloadControl" class="glyphicon glyphicon-download-alt" title="Download spatial data" onclick="toolWindowToggle(&quot;download&quot;)"></span><span id="printControl" class="fa fa-print" title="Print current map" onclick="window.print()"></span></div>');
     //.html('<span class="brand">MI Riparian Planting Prioritization Tool</span> <div id="headerLinks"><a id="showWelcome" href="#" title="Click to show the welcome screen" onclick="d3.select(&quot;#splashScreen&quot;).style(&quot;display&quot;,&quot;flex&quot;)">Welcome</a><a id="launchIntro" href="#" title="Click to launch introduction tutorial" onclick="startIntro()">Tutorial</a><a id="showDetails" title="Click to display informational details about this tool" href="#" data-toggle="modal" data-target="#helpDiv">About</a><a title="Click to go to the Ecosheds homepage" href="http://ecosheds.org" target="_blank">SHEDS Home</a></div><div id="printDownload" class="pull-right"><span id="downloadControl" class="glyphicon glyphicon-download-alt" title="Download spatial data" onclick="toolWindowToggle(&quot;download&quot;)"></span><span id="printControl" class="glyphicon glyphicon-print" title="Print current map" onclick="window.print()"></span></div>');
+
+
+
+
+
+  //Add login icon to enable editing of catchment codes
+
+  d3.select(".header")
+    .append("div")
+    .attr("id", "secureDiv")
+    .attr("class", "hcPanelDivs layerList")
+    .html('<p id="loginNameP"></p><span id="loginIcon" class="secure fa fa-lock" title="Click to login or register"></span>');
+
+  d3.select("#secureDiv").select("span")
+    .on("click", function() {
+      var tmpSpan = d3.select(this);
+      if(tmpSpan.classed("fa-lock") == true) {
+        $('#loginModal').modal('show')
+      }
+      else {
+        tmpSpan.classed("fa-unlock", false);
+        tmpSpan.classed("fa-lock", true);
+        tmpSpan.property("title", "Click to log in or register");
+        d3.select("#loginNameP").text("");
+      }
+    });
+
+
+
+  //******Add modal login box
+  d3.select("body")
+    .append("div")
+    .attr("id", "loginModal")
+    .attr("class", "modal fade")
+    .append("div")
+    .attr("class", "modal-dialog modal-dialog-centered")
+    .html('<div class="modal-body" id="login">'
+      + '<span id="loginClose" class="fa fa-times-circle" data-dismiss="modal" title="Cancel login"></span>'
+      + '<div id="loginDiv">'
+        + '<form action="javascript:;" onsubmit="login(this)">'
+          + '<input type="text" class="registerInput" name="email_log" placeholder="email" title="Email address" value="" required></input>'
+          + '<input id="passwordLog" type="password" class="registerInput pw_input" name="password_log" placeholder="password" title="Password" value="" required></input><span class="pw fa fa-eye" id="togglePWLog" title="Click to show password"></span>'
+          + '<p id="loginErr"></p>'
+          + '<button type="submit" id="loginBut" class="btn btn-primary" title="Click to login"><span class="fa fa-sign-in"></span>Login</button>'
+          + '<p id="registerP"><span id="registerSpan" title="Click to register for an account">Register</span> for an account</p>'
+        + '</form>'
+      + '</div>'
+      + '</div>'
+      + '<div class="modal-body" id="register">'
+      + '<span id="registerClose" class="fa fa-mail-reply-all" title="Return to login window"></span>'
+      + '<div id="registerDiv">'
+        + '<form action="javascript:;" onsubmit="register(this)">'
+          + '<input type="text" class="registerInput" name="fname" placeholder="first name" title="First name" required></input>'
+          + '<input type="text" class="registerInput" name="lname" placeholder="last name" title="Last name" required></input>'
+          + '<input type="text" class="registerInput" name="org" placeholder="organization" title="Organization" required></input>'
+          + '<input id="email_reg" type="email" class="registerInput" name="email" placeholder="email address" title="Email Exists" required data-toggle="popover" data-content="This email has already been registered"></input>'
+          + '<input id="password" type="password" class="registerInput pw_input" name="password" placeholder="password" minlength="8" title="Password" required></input><i class="pw fa fa-eye" id="togglePW" title="Click to show password" style="top:-19px;"></i>'
+          + '<input id="passwordConf" type="password" class="registerInput pw_input" name="passwordConfirm" placeholder="confirm password" title="Confirm password" required></input><i class="pw fa fa-eye" id="togglePWConf" title="Click to show password"></i>'
+          + '<button type="submit" id="registerBut" class="btn btn-primary" title="Click to register"><span class="fa fa-sign-in"></span>Submit</button>'
+        + '</form>'
+      + '</div>'
+      + '</div>' 
+    );
+
+  document.getElementById("passwordConf").setCustomValidity("Passwords do not match");
+
+  d3.selectAll(".pw")
+    .on("click", function() {
+      console.log(this.id);
+      if(d3.select(this).classed("fa-eye") == true) {
+        d3.select(this).classed("fa-eye", false).classed("fa-eye-slash", true).property("title", "Click to hide password");
+        switch(this.id) {
+          case "togglePWLog":
+            d3.select("#passwordLog").attr("type", "text");
+            break;
+          case "togglePW":
+            d3.select("#password").attr("type", "text");
+            break;
+          case "togglePWConf":
+            d3.select("#passwordConf").attr("type", "text");
+            break;
+        }
+      }
+      else {
+        d3.select(this).classed("fa-eye-slash", false).classed("fa-eye", true).property("title", "Click to show password");
+        switch(this.id) {
+          case "togglePWLog":
+            d3.select("#passwordLog").attr("type", "password");
+            break;
+          case "togglePW":
+            d3.select("#password").attr("type", "password");
+            break;
+          case "togglePWConf":
+            d3.select("#passwordConf").attr("type", "password");
+            break;
+        }
+      }
+
+    });
+
+
+  //***Add check for existing email during registration
+  d3.select("#email_reg")
+    .on("blur", function() {
+      if(this.value != "") {
+        if(d3.select("#email_reg").attr("aria-describedby") != null) {
+          $("#email_reg").popover("hide"); 
+          $("#email_reg").on("hidden.bs.popover", function () {
+            socket.emit("check_email", this.value); 
+          })
+        }
+        else {
+          socket.emit("check_email", this.value); 
+        }
+      }
+    });
+
+  //***Add check for same passwords
+  d3.select("#passwordConf")
+    .on("blur", function() {
+      console.log(this.value);
+      if(this.value != d3.select("#password").property("value")) {
+        this.setCustomValidity("Passwords must be matching");
+        if(this.value.length > 0) {
+          this.reportValidity();
+        }
+      }
+      else {
+        this.setCustomValidity("");
+      }
+    });
+
+        
+
+  $("#email_reg").popover("disable");
+
+  //***Add register toggle
+  d3.select("#registerSpan")
+    .on("click", function() { d3.select("#login").style("display", "none"); d3.select("#register").style("display", "block"); });
+
+  //***Cancel registration
+  d3.select("#registerClose")
+    .on("click", function() { 
+      d3.select("#register").style("display", "none"); 
+      d3.select("#login").style("display", "block"); 
+      $("#email_reg").popover("hide");
+    });
+
+  //***Add keyboard listener to input
+  d3.select("#loginDiv").selectAll("input")
+    .on("keyup", function() { if(d3.event.keyCode == 13) { login(); } });
+
+  d3.select("#loginBut")
+    .on("click", function() {
+      login();
+    });
+
+
+
+
+
+
 
 
   //******Make div for geolocater
@@ -200,8 +346,8 @@ function initPage() {
 
 
   //***Add in overlays
-  var land_cover = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:land_cover_2016',
+  var boundary = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
+    layers: 'ebtjv_updater:ebtjv_boundary',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -209,53 +355,8 @@ function initPage() {
     maxZoom: 22
   });
 
-  var imp_sur = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:impervious_2016',
-    format: 'image/png',
-    transparent: true,
-    tiled: true,
-    version: '1.3.0',
-    maxZoom: 22
-  });
-
-  var imp_descr = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:impervious_descr_2016',
-    format: 'image/png',
-    transparent: true,
-    tiled: true,
-    version: '1.3.0',
-    maxZoom: 22
-  });
-
-  var tree_can = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:tree_canopy_2016',
-    format: 'image/png',
-    transparent: true,
-    tiled: true,
-    version: '1.3.0',
-    maxZoom: 22
-  });
-
-  var elevation = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:elevation_30m',
-    format: 'image/png',
-    transparent: true,
-    tiled: true,
-    version: '1.3.0',
-    maxZoom: 22
-  });
-
-  var solar_rad_180 = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:solar_rad_30m_180',
-    format: 'image/png',
-    transparent: true,
-    tiled: true,
-    version: '1.3.0',
-    maxZoom: 22
-  });
-
-  var consec_years = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:consec_years_detected_clipped',
+  var states = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
+    layers: 'ebtjv_updater:ebtjv_states',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -264,7 +365,7 @@ function initPage() {
   });
 
   var counties = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:cb_2018_us_county_500k_mi_wgs84',
+    layers: 'ebtjv_updater:ebtjv_counties',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -272,8 +373,8 @@ function initPage() {
     maxZoom: 22
   });
 
-  var NF = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:s_usa_administrativeforest_mi_wgs84',
+  var huc6 = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
+    layers: 'ebtjv_updater:ebtjv_huc6',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -281,8 +382,8 @@ function initPage() {
     maxZoom: 22
   });
 
-  huc8 = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:wbdhu8_mi',
+  var huc8 = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
+    layers: 'ebtjv_updater:ebtjv_huc8',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -291,7 +392,7 @@ function initPage() {
   });
 
   var huc10 = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:wbdhu10_mi',
+    layers: 'ebtjv_updater:ebtjv_huc10',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -300,7 +401,7 @@ function initPage() {
   });
 
   huc12 = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:wbdhu12_mi',
+    layers: 'ebtjv_updater:ebtjv_huc12',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -308,8 +409,8 @@ function initPage() {
     maxZoom: 22
   });
 
-  var streams = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:nhd24k_mi_lake_erase_no_coast',
+  patches_bkt = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
+    layers: 'ebtjv_updater:ebtjv_patches_bkt_09_22_16',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -317,9 +418,8 @@ function initPage() {
     maxZoom: 22
   });
 
-
-  var lakes = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'ottawa:nhdwaterbody_lakes',
+  patches_wild = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
+    layers: 'ebtjv_updater:ebtjv_patches_wild_trout_09_22_16',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -328,7 +428,7 @@ function initPage() {
   });
 
   catchments = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'EBTJV:ebtjv_catchments_09_22_16',
+    layers: 'ebtjv_updater:ebtjv_catchments_current',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -336,8 +436,8 @@ function initPage() {
     maxZoom: 22
   });
 
-  var boundary = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
-    layers: 'EBTJV:EBTJV_Boundary',
+  var streams = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
+    layers: 'ebtjv_updater:ebtjv_streams',
     format: 'image/png',
     transparent: true,
     tiled: true,
@@ -346,142 +446,15 @@ function initPage() {
   });
 
 
-  //******Add geojson files for feature selection
-  gjCounties = null; 
-  gjNF = null; 
-  gjHUC8 = null; 
-  gjHUC10 = null; 
-  gjHUC12 = null; 
-  var gjLayers = [null,null,null,null,null,null];
 
-  d3.json("gis/s_usa_administrativeforest_mi_wgs84.json")
-    .then(function(data) {
-      var gj = topojson.feature(data, data.objects.s_usa_administrativeforest_mi_wgs84);
-      gjLayers[1] = L.geoJSON(gj, { style: polyLayer, onEachFeature: polyLayerFeatures });
-  });
-
-  d3.json("gis/cb_2018_us_county_500k_mi_wgs84.json")
-    .then(function(data) {
-      var gj = topojson.feature(data, data.objects.cb_2018_us_county_500k_mi_wgs84);
-      gjLayers[2] = L.geoJSON(gj, { style: polyLayer, onEachFeature: polyLayerFeatures });
-  });
-
-  d3.json("gis/wbdhu8_a_mi.json")
-    .then(function(data) {
-      var gj = topojson.feature(data, data.objects.wbdhu8_a_mi);
-      gjLayers[3] = L.geoJSON(gj, { style: polyLayer, onEachFeature: polyLayerFeatures });
-  });
-
-  d3.json("gis/wbdhu10_a_mi.json")
-    .then(function(data) {
-      var gj = topojson.feature(data, data.objects.wbdhu10_a_mi);
-      gjLayers[4] = L.geoJSON(gj, { style: polyLayer, onEachFeature: polyLayerFeatures });
-  });
-
-  d3.json("gis/wbdhu12_a_mi.json")
-    .then(function(data) {
-      var gj = topojson.feature(data, data.objects.wbdhu12_a_mi);
-      gjLayers[5] = L.geoJSON(gj, { style: polyLayer, onEachFeature: polyLayerFeatures });
-  });
-
-
-  //***Feature selection layer styles
-  function polyLayer(feature) {
-    return {
-      fillColor: "white",
-      fillOpacity: 0.01,
-      color: "black",
-      weight: map.getZoom()/3
-    };
-  }
-
-  function polyLayerSelect(feature) {
-    return {
-      fillColor: "aqua",
-      fillOpacity: 0.5,
-      color: "navy",
-    };
-  }
-
-  function polyLayerHover(feature) {
-    return {
-      fillColor: "yellow",
-      fillOpacity: 0.5,
-      color: "fuchsia",
-    };
-  }
-
-  function polyLayerSelectHover(feature) {
-    return {
-      fillColor: "aqua",
-      fillOpacity: 0.5,
-      color: "fuchsia",
-    };
-  }
-
-  //***Feature selection events
-  selFeats = [];
-  selNames = [];
-  var selEvents = [];
-  function polyLayerFeatures(feature, layer){
-    layer.on({
-      click: function(e) {
-        if(selFeats.indexOf(e.target.feature.id) == -1) {
-          selFeats.push(e.target.feature.id);
-          selNames.push(e.target.feature.properties.NAME);
-          selEvents.push(e.target);
-          e.target.setStyle(polyLayerSelectHover());
-        }
-        else {
-          var j = selFeats.indexOf(e.target.feature.id);
-          selFeats.splice(j, 1);
-          selNames.splice(j, 1);
-          selEvents.splice(j, 1);
-          e.target.setStyle(polyLayerHover());
-        }          
-        L.DomEvent.stopPropagation(e); // stop click event from being propagated further
-      },
-      dblclick: function(e) {
-        selFeats.forEach(function(id, i) {
-          selEvents[i].setStyle(polyLayer());
-        });
-        selFeats = [e.target.feature.id];
-        selNames = [e.target.feature.properties.NAME];
-        selEvents = [e.target];
-        e.target.setStyle(polyLayerSelectHover());
-        L.DomEvent.stopPropagation(e); // stop click event from being propagated further
-      },
-      mouseover: function(e) {
-        if(selFeats.indexOf(e.target.feature.id) == -1) {
-          e.target.setStyle(polyLayerHover());
-        }
-        else {
-          e.target.setStyle(polyLayerSelectHover());
-        }
-        tooltip.style("top", (e.originalEvent.pageY-50) + "px").style("left", (e.originalEvent.pageX) + "px");
-        showIt(e.target.feature.properties.NAME);
-      },
-      mouseout: function(e) {
-        if(selFeats.indexOf(e.target.feature.id) == -1) {
-          e.target.setStyle(polyLayer());
-        }
-        else {
-          e.target.setStyle(polyLayerSelect());
-        }
-        tooltip.style("visibility", "hidden");
-      }
-    });
-  }
-
-
-  var opaVar = [land_cover, imp_sur, imp_descr, tree_can, elevation, solar_rad_180, consec_years, NF, counties, huc8, huc10, huc12, streams, lakes];
-  infoObj = {"land_cover_2016": "Land Cover", "impervious_2016": "Impervious Surface", "impervious_descr_2016": "Impervious Descriptor", "tree_canopy_2016": "Tree Canopy", "elevation_30m": "Elevation", "solar_rad_30m_180": "Solar Gain", "consec_years_detected_clipped": "Consec. Years Pest Damage", "s_usa_administrativeforest_mi_wgs84": "National Forest", "cb_2018_us_county_500k_mi_wgs84": "Counties", "wbdhu8_mi": "HUC-8", "wbdhu10_mi": "HUC-10", "wbdhu12_mi": "HUC-12", "nhd24k_mi_lake_erase_no_coast": "NHD Streams", "nhdwaterbody_lakes": "NHD Lakes"};
-  infoIDField = {"land_cover_2016": "PALETTE_INDEX", "impervious_2016": "PALETTE_INDEX", "impervious_descr_2016": "PALETTE_INDEX", "tree_canopy_2016": "GRAY_INDEX", "elevation_30m": "GRAY_INDEX", "solar_rad_30m_180": "GRAY_INDEX", "consec_years_detected_clipped": "GRAY_INDEX", "s_usa_administrativeforest_mi_wgs84": "forestname", "cb_2018_us_county_500k_mi_wgs84": "name", "wbdhu8_mi": "name", "wbdhu10_mi": "name", "wbdhu12_mi": "name", "nhd24k_mi_lake_erase_no_coast": "gnis_name", "nhdwaterbody_lakes": "gnis_name"};
-  infoDataType = {"land_cover_2016": "raster", "impervious_2016": "raster", "impervious_descr_2016": "raster", "tree_canopy_2016": "raster", "elevation_30m": "raster", "solar_rad_30m_180": "raster", "consec_years_detected_clipped": "raster", "s_usa_administrativeforest_mi_wgs84": "polygon", "cb_2018_us_county_500k_mi_wgs84": "polygon", "wbdhu8_mi": "polygon", "wbdhu10_mi": "polygon", "wbdhu12_mi": "polygon", "nhd24k_mi_lake_erase_no_coast": "line", "nhdwaterbody_lakes": "polygon"};
-  queryIDField = {"s_usa_administrativeforest_mi_wgs84": "forestorgc", "cb_2018_us_county_500k_mi_wgs84": "geoid", "wbdhu8_mi": "huc8", "wbdhu10_mi": "huc10", "wbdhu12_mi": "huc12"};
+  var opaVar = [boundary, states, counties, huc6, huc8, huc10, huc12, patches_bkt, patches_wild, catchments, streams];
+  infoObj = {"ebtjv_boundary": "EBTJV Boundary", "ebtjv_states": "States", "ebtjv_counties": "Counties", "ebtjv_huc6": "HUC-6", "ebtjv_huc8": "HUC-8", "ebtjv_huc10": "HUC-10", "ebtjv_huc12": "HUC-12", "ebtjv_patches_bkt_09_22_16": "Brook Trout Patches", "ebtjv_patches_wild_trout_09_22_16": "Wild Trout Patches", "ebtjv_catchments_current": "Catchments", "ebtjv_streams": "NHDPlus v2 Streams"};
+  infoIDField = {"ebtjv_boundary": "name", "ebtjv_states": "state", "ebtjv_counties": "county", "ebtjv_huc6": "hu_6_name", "ebtjv_huc8": "hu_8_name", "ebtjv_huc10": "hu_10_name", "ebtjv_huc12": "hu_12_name", "ebtjv_patches_bkt_09_22_16": "feat_id", "ebtjv_patches_wild_trout_09_22_16": "feat_id", "ebtjv_catchments_current": "featureid", "ebtjv_streams": "gnis_name"};
+  infoDataType = {"ebtjv_boundary": "polygon", "ebtjv_states": "polygon", "ebtjv_counties": "polygon", "ebtjv_huc6": "polygon", "ebtjv_huc8": "polygon", "ebtjv_huc10": "polygon", "ebtjv_huc12": "polygon", "ebtjv_patches_bkt_09_22_16": "polygon", "ebtjv_patches_wild_trout_09_22_16": "polygon", "ebtjv_catchments_current": "polygon", "ebtjv_streams": "line"};
+  queryIDField = {"ebtjv_boundary": "id", "ebtjv_states": "fips", "ebtjv_counties": "counties_", "ebtjv_huc6": "objectid", "ebtjv_huc8": "objectid", "ebtjv_huc10": "objectid", "ebtjv_huc12": "objectid", "ebtjv_patches_bkt_09_22_16": "feat_id", "ebtjv_patches_wild_trout_09_22_16": "feat_id", "ebtjv_catchments_current": "featureid"};
   var overlayID = d3.keys(infoObj);
   var baselayers = {"Google Terrain": googleTerrain, "Google Hybrid": googleHybrid, "Google Satellite": googleSatellite, "Google Street": googleStreet, "Bing Hybrid": bingHybrid, "Bing Satellite": bingSatellite, "Bing Street": bingStreet, "USGS Topo": usgsTopo, "None": blank};
-  var overlays = {"Land Cover": land_cover, "Impervious Surface": imp_sur, "Impervious Descriptor": imp_descr, "Tree Canopy": tree_can, "Elevation": elevation, "Solar Gain": solar_rad_180, "Consec. Years Pest Damage": consec_years, "National Forest": NF, "Counties": counties, "HUC-8": huc8, "HUC-10": huc10, "HUC-12": huc12, "NHD Streams (1:24k)": streams, "NHD Lakes": lakes};
+  var overlays = {"EBTJV Boundary": boundary, "States": states, "Counties": counties, "HUC-6": huc6, "HUC-8": huc8, "HUC-10": huc10, "HUC-12": huc12, "Brook Trout Patches": patches_bkt, "Wild Trout Patches": patches_wild, "Catchments": catchments, "NHDPlus v2 Streams": streams};
   var overlayTitles = d3.keys(overlays);
 
   //******Make layer controller
@@ -533,11 +506,11 @@ function initPage() {
       .on("click", function() { changeBaselayer(this); })
       .append("span")
       .attr("class", "fa fa-check pull-right activeOverlay")
-      .style("visibility", function(d,i) { if(i == 6) {return "visible";} else {return "hidden";} });
+      .style("visibility", function(d,i) { if(i == 0) {return "visible";} else {return "hidden";} });
 
   //******Initialize baselayer
   map.addLayer(googleTerrain);
-  map.addLayer(boundary);
+  //map.addLayer(boundary);
 
   //******Function to change baselayer on select change
   function changeBaselayer(tmpDiv) {
@@ -599,7 +572,6 @@ function initPage() {
       map.addLayer(layerNames.overlays.values[tmpDiv.value]);
       layerNames.overlays.values[tmpDiv.value].bringToFront();
       addLegendImg(tmpDiv.name, tmpDiv.title, layerNames.overlays.values[tmpDiv.value], ["overlays",tmpDiv.title]);
-      rpccr_layer.forEach(function(tmp, i) { tmp.bringToFront(); });
     } 
     else {
       d3.select(tmpDiv).select("span").style("visibility", "hidden");
@@ -616,9 +588,9 @@ function initPage() {
     .append("div")
     .attr("id", "panelTools");
 
-  var hcPanels = ["legend" ,"info", "plant", "locate", "extent"];
-  var hcGlyphs = ["fa-th-list", "fa-info", "fa-tint", "fa-search", "fa-globe"];
-  var hcLabel = ["Legend", "Identify", "Planting", "Locate", "Zoom"]
+  var hcPanels = ["legend" ,"info", "update", "locate", "extent"];
+  var hcGlyphs = ["fa-th-list", "fa-info", "fa-pencil-square", "fa-search", "fa-globe"];
+  var hcLabel = ["Legend", "Identify", "Update", "Locate", "Zoom"]
   d3.select("#panelTools").selectAll("divs")
     .data(hcPanels)
     .enter()
@@ -637,7 +609,7 @@ function initPage() {
       .on("click", function(d) { 
         switch (d) {
           case "extent":
-            map.fitBounds([[41.5,-91],[47.9,-82]]);
+            map.fitBounds([[35,-85],[47,-67]]);
             break;
           default:
             toolWindowToggle(d);
@@ -647,7 +619,7 @@ function initPage() {
 
 
   //******Function to toggle tool windows
-  var toggleWords = {"legend":"Legend", "info":"Identify", "locate": "Locate", "plant": "Planting", "download": "Download"}
+  var toggleWords = {"legend":"Legend", "info":"Identify", "locate": "Locate", "update": "Update", "download": "Download"}
   toolWindowToggle = function (tmpDiv) {
     if (d3.select("#" + tmpDiv + "Div").style("opacity") == "1") {
       d3.select("#" + tmpDiv + "Div").transition().style("opacity", "0").style("visibility", "hidden");
@@ -663,7 +635,7 @@ function initPage() {
 
   function setZ(tmpWin) {
     if (d3.select("#map").classed("introjs-showElement") == false) {
-      d3.selectAll("#legendDiv,#infoDiv,#locateDiv,#plantDiv,#downloadDiv").style("z-index", function() { if(d3.select(this).style("opacity") == 1) {return 1001;} else {return 7500;} }); 
+      d3.selectAll("#legendDiv,#infoDiv,#locateDiv,#updateDiv,#downloadDiv").style("z-index", function() { if(d3.select(this).style("opacity") == 1) {return 1001;} else {return 7500;} }); 
       d3.select(tmpWin).style("z-index", 1002);
     }
   }
@@ -685,37 +657,37 @@ function initPage() {
 
 
 
-  //******Make div for planting location window
+  //******Make div for Catchment Update window
   d3.select("body")
     .append("div")
     .attr("class", "legend gradDown")
-    .attr("id", "plantDiv");
+    .attr("id", "updateDiv");
 
-  $('#plantDiv').draggable({containment: "html", cancel: ".toggle-group,input,textarea,button,select,option"});
+  $('#updateDiv').draggable({containment: "html", cancel: ".toggle-group,input,textarea,button,select,option"});
 
-  d3.select("#plantDiv")
+  d3.select("#updateDiv")
     .append("h4")
-    .text("Planting Locations")
+    .text("Update Catchments")
     .attr("class", "legTitle")
-    .attr("id", "plantTitle")
+    .attr("id", "updateTitle")
     .append("span")
-    .html('<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Planting Sites</b></u></p><p>Set restriction boundaries and specify search criteria to locate potential riparian planting sites.</p>"</span>');
+    .html('<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Update Catchments</b></u></p><p>Update EBTJV catchment classification codes for salmonid species presence.</p>"</span>');
  
-  d3.select("#plantTitle")
-    .html(d3.select("#plantTitle").html() + '<div class="exitDiv"><span id="hidePlant" class="fa fa-times-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p>Click to hide window</p>"</span></div>'); 
+  d3.select("#updateTitle")
+    .html(d3.select("#updateTitle").html() + '<div class="exitDiv"><span id="hideUpdate" class="fa fa-times-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p>Click to hide window</p>"</span></div>'); 
 
-  d3.select("#hidePlant")
-    .on("click", function() { toolWindowToggle("plant"); });
+  d3.select("#hideUpdate")
+    .on("click", function() { toolWindowToggle("update"); });
 
-  d3.select("#plantDiv")
+  d3.select("#updateDiv")
     .append("div")
-    .attr("id", "plantCritDiv")
+    .attr("id", "updateCritDiv")
     .html(''
       + '<div id="featSelDiv">'
         + '<label>Area Selection</label>'
         + '<select id="featSel" class="filterAttrList" title="Click to display a boundary layer and choose polygon features for area restriction"></select><span id="featSelReset" class="fa fa-refresh" title="Reset Area Selection layer"></span>'
       + '</div>'
-      + '<hr id="plantHR">'
+      + '<hr id="updateHR">'
       + '<div id="critSpecDiv">'
         + '<h5>Query Criteria<span class="fa fa-info-circle"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Query Criteria</b></u></p><p>Select a layer and operator, specify a value, and click the \'Add\' button to create a criterion.<br>Values for each raster layer should conform to the following:<ul><li><b>Land Cover:</b> Sixteen integers between 11 and 95 (view the \'Legend\' window for value categories)</li><li><b>Impervious Surface:</b> An integer between 0 and 100 percent</li><li><b>Tree Canopy:</b> An integer between 0 and 100 percent</li><li><b>Elevation:</b> An integer between 114 and 603 meters</li><li><b>Solar Gain:</b> An integer between 0 and 100 percent (see \'About\' window for details)</li><li><b>Consec. Years Pest Damage:</b> An integer between 0 and 6</li></ul></p>"></span></h5>'
         + '<div id="critOptsDiv">'
@@ -809,12 +781,13 @@ function initPage() {
       .property("title", function(d, i) { return opTitle[i]; })
       .text(function(d) { return d; });
 
-  //***Add in RPCCR results to plantDiv
-  d3.select("#plantDiv")
+/*
+  //***Add in RPCCR results to updateDiv
+  d3.select("#updateDiv")
     .append("div")
     .attr("id", "resultsDiv")
-    .html('<h5 class="legTitle">Results<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Planting Site Results</b></u></p><p>List of planting location result layers for viewing, comparing, and downloading.</p>"</span></h5><div id="resLeg"><p><span class="fa fa-square" style="color:#000000;margin:0;"></span> = Meets (101)<span class="fa fa-square" style="color:#33bbff;margin-left:10px;"></span> = Fails (100)</p></div><div id="rpccrDiv"></div>');
- 
+    .html('<h5 class="legTitle">Results<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Updating Site Results</b></u></p><p>List of planting location result layers for viewing, comparing, and downloading.</p>"</span></h5><div id="resLeg"><p><span class="fa fa-square" style="color:#000000;margin:0;"></span> = Meets (101)<span class="fa fa-square" style="color:#33bbff;margin-left:10px;"></span> = Fails (100)</p></div><div id="rpccrDiv"></div>');
+ */
 
 
 
@@ -1012,7 +985,7 @@ function initPage() {
       var tmpRect = document.getElementById(tmpName + "LegendImg").getBoundingClientRect();
       d3.select("#" + tmpName + "LegImgDiv").style({"max-height":tmpRect.height - 67 + "px", "max-width": tmpRect.width + "px"});
       d3.select("#" + tmpName + "Legend").style("opacity", "1");     
-    }).attr("src", "https://ecosheds.org/geoserver/wms?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=30&HEIGHT=30&LAYER=ottawa:" + tmpName);
+    }).attr("src", "https://ecosheds.org/geoserver/wms?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=30&HEIGHT=30&LAYER=ebtjv_updater:" + tmpName);
 
     d3.select("#" + tmpName + "collapseDiv")
       .append("div")
@@ -1056,7 +1029,7 @@ function initPage() {
 
 
   //******Set z-indexes of moveable divs so that clicked one is always on top
-  d3.selectAll("#legendDiv,#infoDiv,#locateDiv,#plantDiv,#downloadDiv")
+  d3.selectAll("#legendDiv,#infoDiv,#locateDiv,#updateDiv,#downloadDiv")
     .on("mousedown", function() { setZ(this); });
 
 
@@ -1079,8 +1052,8 @@ function initPage() {
         .attr("id", "aboutDiv")
         .append("div")
         .attr("class", "aboutLegendTitle")
-        .text("MI Riparian Planting Prioritization Tool")
-        .property("title", "MI Riparian Planting Prioritization Tool informational details")
+        .text("EBTJV Catchment Updater")
+        .property("title", "EBTJV Catchment Updater informational details")
         .append("span")
         .attr("class", "fa fa-times-circle pull-right minimize-button")
         .attr("data-toggle", "modal")
@@ -1100,7 +1073,7 @@ function initPage() {
         .attr("id", "help-overview")
         .style("display", "inline-block") 
         .html('<h3>Background</h3>'
-           + '<p>The MI Riparian Planting Prioritization Tool is a data visualization and decision support tool that was developed to assist with locating and prioritizing tree planting sites that meet user-defined criteria.<br>This tool was designed to assist federal and state agencies, local decision-makers, regional planners, conservation organizations, and natural resource managers using open-source software.</p>'
+           + '<p>The EBTJV Catchment Updater is a data visualization and decision support tool that was developed to assist with updating of EBTJV catchment codes representing salmonid species presence.<br>This tool was designed to assist federal and state agencies, local decision-makers, regional planners, conservation organizations, and natural resource managers using open-source software.</p>'
            //+ '<p>Data for this tool comes from a variety of sources and was developed in partnership with other efforts, including <a href="http://www.umasscaps.org/" target="_blank">CAPS (Conservation Assessment and Prioritization System)</a> and the <a href="https://streamcontinuity.org/" target="_blank">North Atlantic Aquatic Connectivity Collaborative (NAACC)</a>. Thank you to all who provided data, expertise, and feedback for this tool.</p>'
            + '<br>'
            + '<h3>Quick Start</h3>'
@@ -1134,7 +1107,7 @@ function initPage() {
         .attr("class", "helpDivs")
         .attr("id", "help-usage")
         .html('<h3>Overview</h3>'
-           + '<p> The MI Riparian Planting Prioritization Tool presents users with a means to query, view, and download potential locations for tree plantings through an intuitive browser-based mapping interface.</p>'
+           + '<p> The EBTJV Catchment Updater presents coldwater resource managers with a means to update the species occurrence classification code through an intuitive browser-based mapping interface.</p>'
            + '<br>'
            + '<h3>Optimal Performance Requirements</h3>'
            + '<p>The tool is currently supported on the latest versions of all major web browsers, however, <a target="_blank" href="https://www.google.com/chrome/">Google Chrome</a> is highly recommended for the best user experience. The tool is not intended for use on mobile devices, and is a memory-intensive application. Older computers may have difficulty rendering the interface resulting in sluggish performance. If you run into issues, we recommend closing all other programs and browser tabs to increase available memory.</p>'
@@ -1146,7 +1119,7 @@ function initPage() {
            //  + '<li><p><b>Visualization Platform:</b> The <a href="https://d3js.org/" target="_blank">d3.js</a> library is a powerful toolkit for developing interactive visualizations such as charts and maps that can respond to user inputs such as clicking and dragging, and update with great speed and efficiency.</p></li>'
            //+ '</ul>'
            //+ '<h3>Software Libraries</h3>'
-           + '<p>The following open-source software libraries were used to create the MI Riparian Planting Prioritization Tool:</p>'
+           + '<p>The following open-source software libraries were used to create the EBTJV Catchment Updater:</p>'
            + '<ul>'
              + '<li><p><b><a href="https://nodejs.org/en/" target="_blank">Node.js</a>:</b> Web server runtime environment</p></li>'
              + '<li><p><b><a href="https://expressjs.com/" target="_blank">Express</a>:</b> Web server framework and API</p></li>'
@@ -1363,9 +1336,12 @@ function initPage() {
     });
   }
 
-  startIntro();
-}
+  $("#layerToggleDiv0").click();
 
+  if(localStorage.getItem('disableTut') != "true") {
+    startIntro();
+  }
+}
 
 function changePill(tmpID) {
   d3.select("#helpMenu").selectAll("a").classed("active", false);
@@ -1409,7 +1385,7 @@ function resizeTooltip() {
 //******Adjust div position to ensure that it isn't overflowing window
 function resizePanels() {
   var bodyRect = document.body.getBoundingClientRect();
-  var tmpWindows = ["infoDiv", "plantDiv", "locateDiv", "legendDiv", "downloadDiv"];
+  var tmpWindows = ["infoDiv", "updateDiv", "locateDiv", "legendDiv", "downloadDiv"];
         
   tmpWindows.forEach(function(win) {
     var winRect = document.getElementById(win).getBoundingClientRect();
@@ -1539,15 +1515,26 @@ function runQuery() {
 }
 
 
+//******Store whether the tutorial should be disabled on startup
+function setTut(tmpChk) {
+  localStorage.setItem('disableTut', tmpChk.checked);
+}
 
 
 //******Tutorial
 function startIntro() {
+  if(localStorage.getItem('disableTut') == "true") {
+    var tmpCheck = " checked";
+  }
+  else {
+    var tmpCheck = "";
+  }
+
   var intro = introJs();
   intro.setOptions({
     steps: [
       //0
-      { intro: '<b>Welcome to the <span style="font-family:nebulous;color:orangered;font-weight:bold;">EBTJV Catchment Updater</span></b><img src="images/ebtjv_icon.png" style="height:50px;display:block;margin:auto;"></img>This app enables brook trout resource managers to interactively modify and update Eastern Brook Trout Joint Venture catchment classification.' },
+      { intro: '<b>Welcome to the <span style="font-family:nebulous;color:orangered;font-weight:bold;">EBTJV Catchment Updater</span></b><img src="images/ebtjv_icon.png" style="height:50px;display:block;margin:auto;"></img>This app enables brook trout resource managers to interactively modify and update Eastern Brook Trout Joint Venture catchment classification.<br><hr><div style="text-align:center;"><input type="checkbox" id="disTutChk" onchange="setTut(this)" style="position:relative;top:2.5px;" ' + tmpCheck + '></input><label style="font-size:12px;font-weight:bold;margin-left:5px;">Check to stop tutorial from running on page load</label></div>' },
 /*
       //1
       { element: document.querySelector("#launchIntro"), intro: "To access this guide at any time simply click on the 'Tutorial' link." },
@@ -1556,13 +1543,13 @@ function startIntro() {
       //3
       { element: document.querySelector("#overlaySelect"), intro: "Use this dropdown menu  to add raster and pologyon overlay layers. Here the HUC 8 polygon layer has been added." },
       //4
-      { element: document.querySelector("#panelTools"), intro: 'These icons are used to show/hide tool windows and assist with manuevering around the map:<ul><li><span class="fa fa-th-list intro-fa"></span> Show/hide map legend window</li><li><span class="fa fa-info intro-fa"></span> Show/hide feature identification window</li><li><span class="fa fa-tree intro-fa"></span> Show/hide planting location window</li><li><span class="fa fa-search intro-fa"></span> Show/hide map location search window</li><li><span class="fa fa-globe intro-fa"></span> Zoom to full-extent of the map</li></ul>' },
+      { element: document.querySelector("#panelTools"), intro: 'These icons are used to show/hide tool windows and assist with manuevering around the map:<ul><li><span class="fa fa-th-list intro-fa"></span> Show/hide map legend window</li><li><span class="fa fa-info intro-fa"></span> Show/hide feature identification window</li><li><span class="fa fa-tree intro-fa"></span> Show/hide Catchment Updater window</li><li><span class="fa fa-search intro-fa"></span> Show/hide map location search window</li><li><span class="fa fa-globe intro-fa"></span> Zoom to full-extent of the map</li></ul>' },
       //5
       { element: document.querySelector("#legendDiv"), intro: "The legend window provides the user with:<ul><li>A legend key for each layer</li><li>A slider to change the opacity of the layer (here it is shown at 50%)</li><li>The ability to change the layer order on the map by dragging and dropping</li></ul>" },
       //6
       { element: document.querySelector("#infoDiv"), intro: "When the map is clicked, the identify window lists feature names and values for all displayed raster and polygon overlay layers." },
       //7
-      { element: document.querySelector("#plantDiv"), intro: "The planting location window enables the user to:<ul><li>Select areas to conduct analyses</li><li>Specify criteria for locating potential planting sites</li></ul>Instructions for performing an analysis can be found by clicking the 'About' link at the top of the page." },
+      { element: document.querySelector("#updateDiv"), intro: "The Catchment Updater window enables the user to:<ul><li>Select areas to conduct analyses</li><li>Specify criteria for locating potential planting sites</li></ul>Instructions for performing an analysis can be found by clicking the 'About' link at the top of the page." },
       //8
       { element: document.querySelector("#resultsDiv"), intro: 'The results window shows completed runs and enables the user to:<ul><li><span class="fa fa-info-circle intro-fa"></span> View the area selection and criteria used for the analysis</li><li><span class="fa fa-check-square intro-fa"></span> Turn the layer on/off</li><li><span class="fa fa-eye intro-fa"></span> Adjust the layer\'s opacity</li><li><span class="fa fa-search-plus intro-fa"></span> Zoom to the layer on the map</li><li><span class="fa fa-download intro-fa"></span> Download the layer</li><li><span class="fa fa-times-circle intro-fa"></span> Permanently remove the layer</li><ul>', position: "bottom" },
       //9
@@ -1570,7 +1557,7 @@ function startIntro() {
       //10
       { element: document.querySelector("#showDetails"), intro: "The 'About' link opens a window providing information about the tool, and details and download links for the raster and polygon layers used by the tool." },
       //11
-      { intro: 'Thank you for touring the <span style="font-family:nebulous;color:orangered;font-weight:bold;">MI Riparian Planting Prioritization Tool</span>!<img src="images/tree_icon.png" style="height:70px;display:block;margin:auto;"></img>Questions or comments can be directed to <a href="mailto:jcoombs@umass.edu?subject=MI Riparian Planting Prioritization Tool" target="_blank">Jason Coombs</a>.' },
+      { intro: 'Thank you for touring the <span style="font-family:nebulous;color:orangered;font-weight:bold;">EBTJV Catchment Updater</span>!<img src="images/tree_icon.png" style="height:70px;display:block;margin:auto;"></img>Questions or comments can be directed to <a href="mailto:jcoombs@umass.edu?subject=EBTJV Catchment Updater" target="_blank">Jason Coombs</a>.' },
 */
     ],
     tooltipPosition: 'auto',
@@ -1624,7 +1611,7 @@ function startIntro() {
         break;
       case 7:
         revertIntro();
-        d3.select("#plantDiv").style("opacity", 1).style("display", "block");
+        d3.select("#updateDiv").style("opacity", 1).style("display", "block");
         break;
       case 8:
         revertIntro();
@@ -1646,7 +1633,7 @@ function startIntro() {
         map.addLayer(huc12);
         map.addLayer(intro_example);
         map.fitBounds([[46.557404531,-89.961141089],[46.652063889,-89.857069204]]);
-        d3.select("#plantDiv").style("opacity", 1).style("display", "block").classed("intro_vis", true);
+        d3.select("#updateDiv").style("opacity", 1).style("display", "block").classed("intro_vis", true);
         d3.select("#resultsDiv").style("display", "block");
         break;
       case 9: 
@@ -1716,11 +1703,11 @@ function startIntro() {
     d3.select("#infoP").text("");
     d3.select("#infoDiv").style("opacity", "").style("display", "");
     //7
-    d3.select("#plantDiv").style("opacity", "").style("display", "");
+    d3.select("#updateDiv").style("opacity", "").style("display", "");
     //8
     d3.select("#resultsDiv").style("display", "");
     d3.select("#rpccrDiv").select("div").remove();
-    d3.select("#plantDiv").style("opacity", "").style("display", "").classed("intro_vis", false);
+    d3.select("#updateDiv").style("opacity", "").style("display", "").classed("intro_vis", false);
     map.removeLayer(intro_example);
     map.removeLayer(huc12);
     //9
@@ -1732,3 +1719,42 @@ function startIntro() {
 */
   }
 }
+
+
+//******Login to account
+function login(tmpForm) {
+  var tmpData = {};
+  if(typeof(tmpForm) != 'undefined') {
+    tmpData.email = tmpForm.email_log.value;
+    tmpData.password = tmpForm.password_log.value;
+    console.log(tmpData);
+    socket.emit("login", tmpData);
+  }
+}
+
+//******Register for an account
+function register(tmpForm) {
+  socket.emit("check_email", d3.select("#email_reg").property("value"));
+  if(emailExists == true) { 
+    alert("The email has already been registered");
+  }
+  else {
+    var tmpData = {};
+    tmpData.fname = tmpForm.fname.value;
+    tmpData.lname = tmpForm.lname.value;
+    tmpData.org = tmpForm.org.value;
+    tmpData.email = tmpForm.email.value;
+    tmpData.password = tmpForm.password.value;
+    //console.log(tmpData);
+    socket.emit("register", tmpData);
+    $("#registerClose").click();
+    $('#loginModal').modal('hide')
+  }
+}
+
+//******Variable to hold access token
+var accessToken = "";
+
+//******
+var emailExists = false;
+

@@ -1,0 +1,155 @@
+.hcPanelDivs {
+  float: left;
+  height: 100%;
+  padding: 7px 3px 5px 3px;
+  cursor: pointer;
+  margin-left: 0px;
+  margin-right: 0px;
+}
+
+.hcPanelDivs:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.hcPanelDivs.disabled {
+  background: rgba(204,0,0,0.5);
+}
+
+.hcPanelDivs.disabled:hover {
+  background: rgba(204,0,0,0.9);
+}
+
+.hcPanelDivs.enabled {
+  background: rgba(0,153,0,0.5);
+}
+
+.hcPanelDivs.enabled:hover {
+  background: rgba(0,153,0,0.9);
+}
+
+.hcPanelDivs>span, .hcPanelDivs>a>span {
+  font-size: 1.4em;
+  opacity: 1;
+  margin-left: 5px;
+  margin-right: 5px;
+  color: #b3d9ff;
+}
+
+.hcPanelDivs>p, .hcPanelDivs>a>p {
+  display: inline-block;
+  margin: 4px 5px 0px 5px;
+  font-size: 14px;
+  font-weight: bold;
+  //position: relative;
+  //top: 1px;
+  color: #b3d9ff;
+}
+
+#loginNameP {
+  display: inline-block;
+}
+
+#secureDiv {
+  float: right;
+  display: flex;
+  align-items: center;
+}
+
+#loginModal .modal-dialog {
+  width: max-content;
+  pointer-events: all;
+}
+
+#login {
+  display: block;
+}
+
+#register {
+  display: none;
+}
+
+#registerSpan {
+  color: blue;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.registerInput {
+  display: block;
+  width: 225px;
+}
+
+#registerSpan:hover {
+  text-decoration: underline;
+}
+
+#loginClose, #registerClose {
+  color: red;
+  opacity: 0.5;
+  font-size: 1.5rem;
+  float: right;
+  padding: 15px;
+  pointer-events: all;
+}
+
+#loginClose:hover, #registerClose:hover {
+  opacity: 1;
+}
+
+#loginDiv, #registerDiv {
+  background: white;
+  border: 4px solid skyblue;
+  border-radius: 4px;
+  padding: 15px;
+  text-align: center;
+  width: 263px;
+}
+
+#loginDiv input, #registerDiv input {
+  margin-bottom: 10px;
+  pointer-events: all;
+}
+
+#loginBut, #registerBut {
+  pointer-events: all;
+  display: block;
+  margin-left: calc(50% - 44px);
+}
+
+#loginBut span, #registerBut span {
+  color: limegreen;
+  opacity: 1;
+  font-size: 1.3rem;
+  margin-right: 5px;
+  margin-left: 0;
+  position: relative;
+  top: 2px;
+}
+
+#loginErr {
+  color: red;
+  display: none;
+  margin: 0;
+}
+
+#registerP, #registerP a {
+  margin: 0;
+  margin-top: 5px;
+  pointer-events: all;
+}
+
+.pw.fa {
+  cursor: pointer;
+  float: right;
+  position: relative;
+  top: -29px;
+  left: -9px;
+}
+
+.pw.fa:hover {
+  color: green;
+}
+
+#password {
+  margin-bottom: 0 !important;
+}

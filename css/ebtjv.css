@@ -304,72 +304,12 @@ a {
 #printControl {
   position: relative;
   top: 5px;
-  font-size: 1.8em;
+  //font-size: 1.8em;
   margin-right: 10px;
 }
 
 #printControl:hover {
   color: white;
-}
-
-#secureDiv {
-  float: right;
-}
-
-#loginModal .modal-dialog {
-  width: max-content;
-}
-
-#loginClose {
-  color: red;
-  opacity: 0.5;
-  font-size: 1.5rem;
-  float: right;
-  padding: 15px;
-  pointer-events: all;
-}
-
-#loginClose:hover {
-  opacity: 1;
-}
-
-#loginDiv {
-  background: white;
-  border: 4px solid skyblue;
-  border-radius: 4px;
-  padding: 15px;
-  text-align: center;
-}
-
-#loginDiv input {
-  margin-bottom: 10px;
-  pointer-events: all;
-}
-
-#loginBut {
-  pointer-events: all;
-}
-
-#loginBut span {
-  color: limegreen;
-  opacity: 1;
-  font-size: 1.3rem;
-  margin-right: 5px;
-  margin-left: 0;
-  position: relative;
-  top: 2px;
-}
-
-#loginErr {
-  color: red;
-  display: none;
-  margin: 0;
-}
-
-#registerP, #registerP a {
-  margin: 0;
-  margin-top: 5px;
-  pointer-events: all;
 }
 
 #map {
@@ -414,20 +354,20 @@ a {
   opacity: 0;
 }
 
-#plantDiv {
+#updateDiv {
   top: 85px;
 }
 
-#plantDiv h5 {
+#updateDiv h5 {
   text-align: left;
 }
 
-#plantCritDiv {
+#updateCritDiv {
   padding: 10px;
   padding-bottom: 0px;
 }
 
-#plantHR {
+#updateHR {
   margin: 5px 0px 10px 0px;
   color: #333333;
   border-top-width: 2px;
