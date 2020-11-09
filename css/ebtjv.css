@@ -356,6 +356,7 @@ a {
 
 #updateDiv {
   top: 85px;
+  left: 380px;
 }
 
 #updateDiv h5 {
@@ -374,23 +375,6 @@ a {
   border-top-color: #333333;
 }
 
-#critSpecDiv h5 {
-  text-decoration: underline;
-}
-
-#critOptsDiv {
-  margin-left: 20px;
-  text-align: left;
-}
-
-#critLayerSel {
-  margin-left: 32px;
-}
-
-#critValInp {
-  margin-left: 30px;
-}
-
 .formBut {
   margin: 5px;
   //margin-left: 62px;
@@ -406,103 +390,94 @@ a {
 
 .formBut span {
   margin: 0;
-}
-
-#critButDiv {
-  text-align: center;
-  position: relative;
-  left: -4%;
-}
-
-#critAddedDiv {
-  margin-top: 3px;
-  background: white;
-  background: linear-gradient(white, #f2f2f2);
-  padding: 0 5px;
-  text-align: center;
-  border: 2px solid #333333;
-  border-radius: 4px;
-  display: none;
-}
-
-.critAddedDiv {
-  text-align: center;
-}
-
-.critAddedP {
-  font-weight: bold;
-  margin: 3px;
-  border: 1px solid #333333;
-  border-radius: 4px;
-  color: white;
-  background-color: lightskyblue;
-  padding: 0 3px;
-}
-
-.critAddedP:hover {
-  background-color: #007bff;
-}
-
-.fa.critRemove {
-  float: right;
-  color: black;
-  font-size: 1.2rem;
-  opacity: 0.5;
-  position: relative;
-  top: 3px;
-}
-
-.fa.critRemove:hover {
   opacity: 1;
 }
 
-#runDiv {
-  border-top: solid 2px #333333;
-  background: lightgray;
-  width: 104%;
+#manualDiv, #codeDiv, #rawDiv {
+  display: none;
+}
+
+#manualForm .minWidth {
+  min-width: 160px;
+}
+
+.filterAttrList.inputText {
+  cursor: text;
+}
+
+.updateTable td:nth-child(1) {
+  text-align: right;
+}
+
+.updateTable td:nth-child(2), .updateTable td:nth-child(3) {
+  text-align: left;
+}
+
+.manualRadio {
   position: relative;
-  left: -2%;
-  border-radius: 0 0 4px 4px
+  top: 5px;
+  margin-right: 5px;
+}
+
+.manualRadioLabel {
+  position: relative;
+  top: -3px;
+  cursor: pointer;
+}
+
+#manualRadNew, #manualRadNo {
+  margin-left: 25px;
+}
+
+#manualReasonText {
+  display: none;
+}
+
+#codeFileUpload {
+  font-size: 22px;
+  margin: 0;
+  color: lime;
+}
+
+#codeFormFeatTR, .codeFormSppTR {
+  display: none;
+}
+
+#codeForm .radTR td {
+  padding: 0;
+}
+
+#codeForm .radTR td label {
+  margin: 0;
 }
 
 #progBarDiv {
   display: none;
 }
 
-#resultsDiv {
-  position: absolute;
-  left: 306px;
-  top: 83px;
-  background: steelblue;
-  width: max-content;
+#confirmDiv {
+  top: 85px;
+  left: calc(50% - 194px);
+}
+
+#confirmTable, #confirmTable th, #confirmTable td {
   border: 1px solid #333333;
-  border-radius: 4px;
-  padding: 5px;
-  display: none;
+  padding: 2px 5px;
 }
 
-#resLeg p {
-  margin: 0;
+#confirmTable {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.rpccrP {
-  background: lightskyblue;
-  padding: 3px 5px 3px 3px;
-  border: 1px solid #333333;
-  border-radius: 4px;
-  margin: 3px 0;
-}
-
-.rpccrA {
-  color: white;
-}
-
-.rpccrA:hover {
-  color: white;
+#confirmTable tbody {
+  overflow-y: auto;
+  max-height: 300px;
 }
 
 #infoDiv {
   top: calc(100% - 100px);
+  left: 10px;
 }
 
 #downloadDiv {
@@ -852,9 +827,13 @@ a {
   text-shadow: none;
 }
 
-.tooltip-inner ul {
+.tooltip-inner ul, .tooltip-inner ol {
   text-align: left;
   padding-left: 15px;
+}
+
+.tooltip-inner .fa {
+  margin: 0;
 }
 
 .d3Tooltip {
@@ -873,10 +852,6 @@ a {
   visibility: hidden;
   white-space: nowrap;
 }
-
-
-
-
 
 #helpDiv {
   display: flex;
@@ -1112,6 +1087,80 @@ a {
   font-size: 17px !important;
   padding: 0 63px 0 189px;
 }
+
+#catchDiv {
+  top: 85px;
+  left: 10px;
+}
+
+.infoTable {
+  background: lightgray;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: text;
+}
+
+.infoTable thead {
+  display: block;
+}
+
+.infoTable tbody {
+  color: #333333;
+  display: block;
+  overflow-y: auto;
+  max-height: 271px;
+  font-size: 15px;
+}
+
+.infoTable th:nth-child(1), .infoTable td:nth-child(1) {
+  width: 175px;
+}
+
+.infoTable th:nth-child(2), .infoTable td:nth-child(2) {
+  width: 150px;
+}
+
+.infoTable p {
+  margin: 0;
+}
+
+.infoTable table {
+  border-collapse: collapse;
+}
+
+.infoTable th, .infoTable td {
+  border: 1px solid #333333;
+  padding: 2px 5px;
+}
+
+.infoTable th {
+  background: cornflowerblue;
+  color: white;
+}
+
+.infoTable td {
+  //background: white;
+  font-weight: normal;
+}
+
+.infoTable tbody tr {
+  background: white;
+}
+
+.infoTable tbody tr:hover {
+  color: black;
+  background: cyan;
+}
+
+.infoTable tbody tr.editTR {
+  background: palegreen;
+}
+
+.infoTable tbody tr.editTR:hover {
+  color: black;
+  background: lime;
+}
+
 
 
 

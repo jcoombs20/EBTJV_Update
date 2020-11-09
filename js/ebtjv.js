@@ -102,6 +102,8 @@ function initPage() {
         tmpSpan.classed("fa-lock", true);
         tmpSpan.property("title", "Click to log in or register");
         d3.select("#loginNameP").text("");
+        accessToken = "";
+        curUser = "";
       }
     });
 
@@ -146,7 +148,6 @@ function initPage() {
 
   d3.selectAll(".pw")
     .on("click", function() {
-      console.log(this.id);
       if(d3.select(this).classed("fa-eye") == true) {
         d3.select(this).classed("fa-eye", false).classed("fa-eye-slash", true).property("title", "Click to hide password");
         switch(this.id) {
@@ -198,7 +199,6 @@ function initPage() {
   //***Add check for same passwords
   d3.select("#passwordConf")
     .on("blur", function() {
-      console.log(this.value);
       if(this.value != d3.select("#password").property("value")) {
         this.setCustomValidity("Passwords must be matching");
         if(this.value.length > 0) {
@@ -619,7 +619,7 @@ function initPage() {
 
 
   //******Function to toggle tool windows
-  var toggleWords = {"legend":"Legend", "info":"Identify", "locate": "Locate", "update": "Update", "download": "Download"}
+  var toggleWords = {"legend":"Legend", "info":"Identify", "locate": "Locate", "update": "Update", "download": "Download", "catch": "Catchment Info", "confirm": "Confirm"}
   toolWindowToggle = function (tmpDiv) {
     if (d3.select("#" + tmpDiv + "Div").style("opacity") == "1") {
       d3.select("#" + tmpDiv + "Div").transition().style("opacity", "0").style("visibility", "hidden");
@@ -635,7 +635,7 @@ function initPage() {
 
   function setZ(tmpWin) {
     if (d3.select("#map").classed("introjs-showElement") == false) {
-      d3.selectAll("#legendDiv,#infoDiv,#locateDiv,#updateDiv,#downloadDiv").style("z-index", function() { if(d3.select(this).style("opacity") == 1) {return 1001;} else {return 7500;} }); 
+      d3.selectAll("#legendDiv,#infoDiv,#locateDiv,#updateDiv,#downloadDiv,#catchDiv,#confirmDiv").style("z-index", function() { if(d3.select(this).style("opacity") == 1) {return 1001;} else {return 7500;} }); 
       d3.select(tmpWin).style("z-index", 1002);
     }
   }
@@ -650,6 +650,39 @@ function initPage() {
     .append("div")
     .attr("id", "d3Tooltip")
     .attr("class", "d3Tooltip");
+
+
+
+
+
+
+  //******Make div for viewing Catchment Info
+  d3.select("body")
+    .append("div")
+    .attr("class", "legend gradDown")
+    .attr("id", "catchDiv");
+
+  $('#catchDiv').draggable({containment: "html", cancel: ".toggle-group,input,textarea,button,select,option,table"});
+
+  d3.select("#catchDiv")
+    .append("h4")
+    .text("Catchment Info")
+    .attr("class", "legTitle")
+    .attr("id", "catchTitle")
+    .append("span")
+    .html('<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Catchment Information</b></u></p><p>Displays attribute values and editing information about the clicked catchment</p>"</span>');
+ 
+  d3.select("#catchTitle")
+    .html(d3.select("#catchTitle").html() + '<div class="exitDiv"><span id="hideCatch" class="fa fa-times-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p>Click to hide window</p>"</span></div>'); 
+
+  d3.select("#hideCatch")
+    .on("click", function() { toolWindowToggle("catch"); });
+
+  d3.select("#catchDiv")
+    .append("div")
+    .attr("id", "catchInfoDiv")
+    .html('<table id="catchInfoTable" class="infoTable"><thead><tr><th>Attribute</th><th>Value</th></tr></thead><tbody></tbody></table>');
+
 
 
 
@@ -683,111 +716,379 @@ function initPage() {
     .append("div")
     .attr("id", "updateCritDiv")
     .html(''
-      + '<div id="featSelDiv">'
-        + '<label>Area Selection</label>'
-        + '<select id="featSel" class="filterAttrList" title="Click to display a boundary layer and choose polygon features for area restriction"></select><span id="featSelReset" class="fa fa-refresh" title="Reset Area Selection layer"></span>'
+      + '<div id="methodSelDiv">'
+        + '<label>Update Method</label>'
+        + '<select id="methodSel" class="filterAttrList" title="Click to select a method of updating the catchments"></select><span id="featSelReset" class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Update Method</b></u></p><p>Catchments can be updated using one of the following methods:<ul><li><b><u>Manual Edit</u></b> - Select and edit a single catchment by hand</li><li><b><u>Import File</u></b> - Import a CSV file containing catchment ids or sample point coordinates with associated EBTJV code or species data</li></ul></p>"></span>'
       + '</div>'
       + '<hr id="updateHR">'
-      + '<div id="critSpecDiv">'
-        + '<h5>Query Criteria<span class="fa fa-info-circle"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Query Criteria</b></u></p><p>Select a layer and operator, specify a value, and click the \'Add\' button to create a criterion.<br>Values for each raster layer should conform to the following:<ul><li><b>Land Cover:</b> Sixteen integers between 11 and 95 (view the \'Legend\' window for value categories)</li><li><b>Impervious Surface:</b> An integer between 0 and 100 percent</li><li><b>Tree Canopy:</b> An integer between 0 and 100 percent</li><li><b>Elevation:</b> An integer between 114 and 603 meters</li><li><b>Solar Gain:</b> An integer between 0 and 100 percent (see \'About\' window for details)</li><li><b>Consec. Years Pest Damage:</b> An integer between 0 and 6</li></ul></p>"></span></h5>'
-        + '<div id="critOptsDiv">'
-          + '<form id="critForm" action="javascript:;" onsubmit="addCrit(this)">'
-            + '<label>Layer: </label>'
-            + '<select id="critLayerSel" class="filterAttrList" name="critLayer" title="Select a layer for adding a location restriction criteria to the search query" required></select>'
-            + '<br>'
-            + '<label>Operator: </label>'
-            + '<select id="critOpSel" class="filterAttrList" name="critOp" title="Select an operator to add to the location restriction criteria" required></select>'
-            + '<br>'
-            + '<label>Value: </label>'
-            + '<input type="number" id="critValInp" class="filterAttrList" name="critVal" min="0" title="Specify a value to add to the location restriction criteria" required></input>'
-            + '<br>'
-            + '<div id="critButDiv">'
-              + '<button type="submit" id="critBut" class="formBut btn btn-primary" title="Click to add criteria to the location search query"><span class="fa fa-list"></span> Add</button>'
+      //***Manual Entry
+      + '<div id="manualDiv" class="updateMethodDiv">'
+        + '<h5>Manual Edit<span class="fa fa-info-circle"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Manual Edit</b></u></p><p>Steps to update a catchment code through manual edit:<ol><li>Add catchment overlay layer</li><li>Select target catchment by clicking it on the map</li><li>Enter data into form fields</li><li>Click \'Update\' button</li></ol></p>"></span></h5>'
+        + '<div id="manualFormDiv">'
+          + '<form id="manualForm" action="javascript:;" onsubmit="manualEdit(this)">'
+            + '<table id="manualTable" class="updateTable">'
+            + '<tr>'
+            + '<td><label>Feature ID: </label></td>'
+            + '<td><input type="text" id="manualFeat" class="filterAttrList inputText minWidth" name="manualFeat" title="Enter the feature id of the target catchment or click on it on the map" required></input></td>'
+            + '</tr>'
+            + '<tr>'
+            + '<td><label>Updated Code: </label></td>'
+            + '<td><select id="manualCode" class="filterAttrList minWidth" name="manualCode" title="Select the EBTJV code to which to update" required></select><span class="fa fa-info-circle"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>EBTJV Catchment Codes</b></u></p><p><ul><li><u><b>0</b></u>: No salmonids present</li><li><u><b>0.2</b></u>: Brown Trout</li><li><u><b>0.3</b></u>: Rainbow Trout</li><li><u><b>0.4</b></u>: Rainbow & Brown Trout</li><li><u><b>05</b></u>: Stocked Brook Trout</li><li><u><b>1.1</b></u>: Brook Trout</li><li><u><b>1.2</b></u>: Brook & Brown Trout</li><li><u><b>1.3</b></u>: Brook & Rainbow Trout</li><li><u><b>1.4</b></u>: Brook, Brown & Rainbow Trout</li></ul>*P added to end of code indicates predicted (>10 years since sampled)</p>"></span></td>'
+            + '</tr>'
+            + '<tr>'
+            + '<td><label>Sample Date: </label></td>'
+            + '<td><input type="date" id="manualSampDate" class="filterAttrList minWidth" name="manualSampDate" title="Date of new sample responsible for catchment update" required></input></td>'
+            + '</tr>'
+            + '<tr>'
+            + '<td><label>Reason: </label></td>'
+            + '<td><input type="radio" id="manualRadOld" class="filterAttrList manualRadio" name="manualReason" value="old" title="Choose this option to select a reason from a list populated with reasons that are currently in the table" checked><label class="manualRadioLabel" for="manualRadOld" title="Choose this option to select a reason from a list populated with reasons that are currently in the table">Existing</label></input><input type="radio" id="manualRadNew" class="filterAttrList manualRadio" name="manualReason" value="new" title="Choose this option to add a new reason not already present in the database"><label class="manualRadioLabel" for="manualRadNew" title="Choose this option to add a new reason not already present in the database">New</label></input></td>'
+            + '</tr>' 
+            + '<tr>'
+            + '<td></td>'
+            + '<td><select id="manualReasonSel" class="filterAttrList minWidth" name="manualReasonSel" title="Select the reason for updating the catchment" required></select><input type="text" id="manualReasonText" class="filterAttrList inputText minWidth" name="manualReasonText" title="Add a new reason for updating the catchment"</input></td>'
+            + '</tr>'
+            + '<tr>'
+            + '<td><label>Extend Upstream: </label></td>'
+            + '<td><input type="radio" id="manualRadYes" class="filterAttrList manualRadio" name="manualExtend" value="yes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment" checked><label class="manualRadioLabel" for="manualRadYes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment">Yes</label></input><input type="radio" id="manualRadNo" class="filterAttrList manualRadio" name="manualExtend" value="no" title="Choose this option to only edit the currently selected catchment"><label class="manualRadioLabel" for="manualRadNo" title="Choose this option to only edit the currently selected catchment">No</label></input></td>'
+            + '</tr>'
+            + '</table>'
+            + '<hr id="updateHR">'
+            + '<div id="updateButDiv">'
+              + '<button type="submit" id="manualBut" class="formBut btn btn-primary" title="Click to update catchment">Update <span class="fa fa-play"></span></button>'
             + '</div>'
           + '</form>'
         + '</div>'
-        + '<div id="critAddedDiv">'
-          + '<div id="runDiv">'
-            + '<button id="runBut" class="formBut btn btn-primary" title="Click to run the location search query"><span class="fa fa-arrow-circle-right"></span> Run</button>'
-          + '<div>'
+      + '</div>'
+
+      //***Import file
+      + '<div id="codeDiv" class="updateMethodDiv">'
+        + '<h5>Import File<span class="fa fa-info-circle"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Import File</b></u></p><p>Steps to update catchments by importing a CSV file:<ol><li>Choose the your CSV file (see \'About\' for formatting details)</li><li>Upload the file be clicking the <span class=&quot;fa fa-upload&quot;></span> icon<li>Map the file column names to the appropriate fields</li><li>Click \'Update\' button</li></ol></p>"></span></h5>'
+        + '<div id="codeFormDiv">'
+          + '<form id="codeForm" action="javascript:;" onsubmit="importEdit(this)">'
+            + '<table id="codeTable" class="updateTable">' 
+            + '<tr style="border-bottom: 1px solid;">'
+            + '<td colspan="3" style="padding-bottom:5px;"><input type="file" id="codeFile" class="inputText" name="codeFile" accept=".csv" title="Click to select a file" required></input></td>'
+            //+ '<td style="text-align:center;"><span id="codeFileUpload" class="fa fa-upload" title="Click to upload the selected file"></span></td>'
+            + '</tr>'
+            + '<tr class="radTR">'
+            + '<td><label>Locate Catchment: </label></td>'
+            + '<td><input type="radio" id="codeRadCoords" class="filterAttrList manualRadio" name="codeLocID" value="coordinates" title="Choose this option to identify catchments through sample location coordinates (decimal degrees)" checked><label class="manualRadioLabel" for="codeRadCoords" title="Choose this option to identify catchments through sample location coordinates (decimal degrees)">Coordinates</label></input></td>'
+            + '<td><input type="radio" id="codeRadFeatID" class="filterAttrList manualRadio" name="codeLocID" value="featureid" title="Choose this option to identify catchments by their feature ID\'s"><label class="manualRadioLabel" for="codeRadFeatID" title="Choose this option to identify catchments by their feature ID\'s">Feature ID</label></input></td>'
+            + '</tr>'
+            + '<tr class="radTR">'
+            + '<td><label>Classify Catchment: </label></td>'
+            + '<td><input type="radio" id="codeRadCodes" class="filterAttrList manualRadio" name="codeClassify" value="ebtjv_code" title="Choose this option to classify catchments using EBTJV codes" checked><label class="manualRadioLabel" for="codeRadCodes" title="Choose this option to classify catchments using EBTJV codes">EBTJV Code</label></input></td>'
+            + '<td><input type="radio" id="codeRadRaw" class="filterAttrList manualRadio" name="codeClassify" value="raw_data" title="Choose this option to classify catchments using salmonid species presence data"><label class="manualRadioLabel" for="codeRadRaw" title="Choose this option to classify catchments using salmonid species presence data">Species Presence</label></input></td>'
+            + '</tr>'
+            + '<tr class="radTR" style="border-bottom: 1px solid;">'
+            + '<td style="padding-bottom:5px;"><label>Extend Upstream: </label></td>'
+            + '<td><input type="radio" id="codeRadYes" class="filterAttrList manualRadio" name="codeExtend" value="yes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment" checked><label class="manualRadioLabel" for="codeRadYes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment">Yes</label></td>'
+            + '<td></input><input type="radio" id="codeRadNo" class="filterAttrList manualRadio" name="codeExtend" value="no" title="Choose this option to only edit the catchments in the file"><label class="manualRadioLabel" for="codeRadNo" title="Choose this option to only edit the catchments in the file">No</label></input></td>'
+            + '</tr>'
+            + '<tr class="radTR">'
+            + '<td><label><b>Map the below fields: </b></label></td>'
+            + '<td></td>'
+            + '<td></td>'
+            + '</tr>'
+            + '<tr id="codeFormLatTR">'
+            + '<td><label>Latitude: </label></td>'
+            + '<td><select id="codeLatSel" class="filterAttrList minwidth" name="codeLatSel" title="Select the field in the CSV file that contains the latitude of the new sample" required><option>Select field...</option></select></td>'
+            + '</tr>'
+            + '<tr id="codeFormLongTR">'
+            + '<td><label>Longitude: </label></td>'
+            + '<td><select id="codeLongSel" class="filterAttrList minwidth" name="codeLongSel" title="Select the field in the CSV file that contains the longitude of the new sample" required><option>Select field...</option></select></td>'
+            + '</tr>'
+            + '<tr id="codeFormFeatTR">'
+            + '<td><label>Feature ID: </label></td>'
+            + '<td><select id="codeFeatSel" class="filterAttrList minwidth" name="codeFeatSel" title="Select the field in the CSV file that contains the catchment feature ID"><option>Select field...</option></select></td>'
+            + '</tr>'
+            + '<tr id="codeFormCodeTR">'
+            + '<td><label>Updated Code: </label></td>'
+            + '<td><select id="codeCodeSel" class="filterAttrList minwidth" name="codeCodeSel" title="Select the field in the CSV file that contains the updated EBTJV catchment code" required><option>Select field...</option></select></td>'
+            + '</tr>'
+            + '<tr class="codeFormSppTR">'
+            + '<td><label>Brook Trout: </label></td>'
+            + '<td><select id="codeBktSel" class="filterAttrList minwidth spp" name="codeBktSel" title="Select the field in the CSV file that contains brook trout presence data"><option>Select field...</option></select></td>'
+            + '</tr>'
+            + '<tr class="codeFormSppTR">'
+            + '<td><label>Brown Trout: </label></td>'
+            + '<td><select id="codeBntSel" class="filterAttrList minwidth spp" name="codeBntSel" title="Select the field in the CSV file that contains brown trout presence data"><option>Select field...</option></select></td>'
+            + '</tr>'
+            + '<tr class="codeFormSppTR">'
+            + '<td><label>Rainbow Trout: </label></td>'
+            + '<td><select id="codeRbtSel" class="filterAttrList minwidth spp" name="codeRbtSel" title="Select the field in the CSV file that contains rainbow trout presence data"><option>Select field...</option></select></td>'
+            + '</tr>'
+            + '<tr class="codeFormSppTR">'
+            + '<td><label>Stocked Brook Trout: </label></td>'
+            + '<td><select id="codeBktStockedSel" class="filterAttrList minwidth spp" name="codeBktStockedSel" title="Select the field in the CSV file that contains stocked brook trout presence data"><option>Select field...</option></select></td>'
+            + '</tr>'
+            + '<tr>'
+            + '<td><label>Sample Date: </label></td>'
+            + '<td><select id="codeDateSel" class="filterAttrList minwidth" name="codeDateSel" title="Select the field in the CSV file that contains the most recent sample date" required><option>Select field...</option></select></td>'
+            + '</tr>'
+            + '<tr>'
+            + '<td><label>Reason: </label></td>'
+            + '<td><select id="codeReasonSel" class="filterAttrList minwidth" name="codeReasonSel" title="Select the field in the CSV file that contains the reason for the update" required><option>Select field...</option></select></td>'
+            + '</tr>'
+            + '</table>'
+            + '<hr id="updateHR">'
+            + '<div id="updateButDiv">'
+              + '<button type="submit" id="codeBut" class="formBut btn btn-primary" title="Click to update catchments">Update <span class="fa fa-play"></span></button>'
+            + '</div>'
+          + '</form>'
         + '</div>'
-        + '<div id="progBarDiv" class="progress">'
-          + '<div id="progBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%">0%</div>'
-        + '</div>'
+      + '</div>'
+        
+
+      + '<div id="progBarDiv" class="progress">'
+        + '<div id="progBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%">0%</div>'
       + '</div>'
     );
 
-  d3.select("#featSelReset").on("click", function() { d3.select("#featSel").property("selectedIndex", 0); changeFeatSel(); });
-  d3.select("#runBut").on("click", function() { runQuery(); });
 
-  var featLayers = ["Select Layer...", "National Forest", "Counties", "HUC 8 Watersheds", "HUC 10 Watersheds", "HUC 12 Watersheds"];
-  var pgFeatLayerNames = [null, "s_usa_administrativeforest_mi_wgs84", "cb_2018_us_county_500k_mi_wgs84", "wbdhu8_mi", "wbdhu10_mi", "wbdhu12_mi"];
-  var gjCur = 0;
-  gjCurName = "";
-  var gjFeats = [];
+  var updateMethods = ["Select Method...", "Manual Edit", "Import File"];
+  var updateMethodDivs = ["", "manualDiv", "codeDiv"];
 
-  var tmpSel = d3.select("#featSel")
-    .on("change", function() { changeFeatSel(); });
-
-  function changeFeatSel() {
-    selFeats.forEach(function(id, i) {
-      selEvents[i].setStyle(polyLayer());
+  var tmpSel = d3.select("#methodSel")
+    .on("change", function() { 
+      d3.selectAll(".updateMethodDiv").style("display", "none");
+      var tmpDiv = d3.select(this.options[this.selectedIndex]).attr("data-div");
+      d3.select("#" + tmpDiv).style("display", "block");
     });
-    selFeats = [];
-    selNames = [];
-    selEvents = [];
 
-    if(gjCur != 0) {
-      map.removeLayer(gjLayers[gjCur]); 
-      d3.select("#d3Tooltip").style("visibility", "hidden");
+
+  tmpSel.selectAll("option")
+    .data(updateMethods)
+    .enter()
+      .append("option")
+      .attr("value", function(d) { return d; })
+      .attr("data-i", function(d,i) { return i; })
+      .attr("data-div", function(d,i) { return updateMethodDivs[i]; })
+      .property("disabled", function(d, i) { if(i==0) {return "disabled";} })
+      .text(function(d) { return d; });
+
+
+  d3.select("#manualFeat")
+    .on("keydown", function() { 
+      if(d3.event.key == "Enter") {
+        socket.emit("feat_zoom", {"tmpFeat": this.value});
+      }
+    });
+
+
+  var codeTitle = ["", "No Salmonids", "No Salmonids Predicted", "Brown Trout", "Brown Trout Predicted", "Rainbow Trout", "Rainbow Trout Predicted", "Brown & Rainbow Trout", "Brown & Rainbow Trout Predicted", "Stocked Brook Trout", "Stocked Brook Trout Predicted", "Brook Trout", "Brook Trout Predicted", "Brook & Brown Trout", "Brook & Brown Trout Predicted", "Brook & Rainbow Trout", "Brook & Rainbow Trout Predicted", "Brook, Brown & Rainbow Trout", "Brook, Brown & Rainbow Trout Predicted"];
+  d3.select("#manualCode").selectAll("option")
+    .data(["", "0", "0P", "0.2", "0.2P", "0.3", "0.3P", "0.4", "0.4P", "0.5", "0.5P", "1.1", "1.1P", "1.2", "1.2P", "1.3", "1.3P", "1.4", "1.4P"])
+    .enter()
+      .append("option")
+      .attr("value", function(d) { return d; })
+      .property("title", function(d, i) { return codeTitle[i]; })
+      .text(function(d) { return d; });
+
+  //***Populate Reasons select
+  socket.emit("get_reasons");
+
+  //***Set reason validity on change
+  d3.select("#manualReasonSel")
+    .on("change", function() { setReasonSelVal(this); });
+
+  //***Set map selects validity on change
+  d3.select("#codeForm").selectAll("select")
+    .on("change", function() { setCodeSelVal(this); });
+
+  //***Initialize map selects validity
+  d3.select("#codeForm").selectAll("select").each(function() { setCodeSelVal(this); });
+
+  //***Add radio button responses for manual edit method
+  d3.selectAll("#manualRadOld,#manualRadNew")
+    .on("change", function() {
+      if(this.value == "old") {
+        document.getElementById("manualReasonText").required = false;
+        document.getElementById("manualReasonSel").required = true;
+        setReasonSelVal(document.getElementById("manualReasonSel"));
+        d3.select("#manualReasonText").style("display", "none");
+        d3.select("#manualReasonSel").style("display", "block");
+      }
+      else {
+        document.getElementById("manualReasonSel").required = false;
+        document.getElementById("manualReasonText").required = true;
+        setReasonSelVal(document.getElementById("manualReasonSel"));
+        d3.select("#manualReasonSel").style("display", "none");
+        d3.select("#manualReasonText").style("display", "block");        
+      }
+    });
+  
+  //***Add radio button responses for locate catchment in import method
+  d3.selectAll("#codeRadCoords,#codeRadFeatID")
+    .on("change", function() {
+      if(this.value == "coordinates") {
+        document.getElementById("codeFeatSel").required = false;
+        document.getElementById("codeLatSel").required = true;
+        document.getElementById("codeLongSel").required = true;
+        ["codeFeatSel", "codeLatSel", "codeLongSel"].forEach(function(tmpSel) {
+          setCodeSelVal(document.getElementById(tmpSel));
+        });
+        d3.select("#codeFormFeatTR").style("display", "none");
+        d3.selectAll("#codeFormLatTR,#codeFormLongTR").style("display", "table-row");
+      }
+      else {
+        document.getElementById("codeFeatSel").required = true;
+        document.getElementById("codeLatSel").required = false;
+        document.getElementById("codeLongSel").required = false;
+        ["codeFeatSel", "codeLatSel", "codeLongSel"].forEach(function(tmpSel) {
+          setCodeSelVal(document.getElementById(tmpSel));
+        });
+        d3.select("#codeFormFeatTR").style("display", "table-row");
+        d3.selectAll("#codeFormLatTR,#codeFormLongTR").style("display", "none");
+      }
+    });
+
+  //***Add radio button responses for classify catchment in import method
+  d3.selectAll("#codeRadCodes,#codeRadRaw")
+    .on("change", function() {
+      if(this.value == "ebtjv_code") {
+        var tmpSels = document.getElementsByClassName("spp");
+        for (let i=0; i<tmpSels.length; i++) {
+          tmpSels[i].required = false;
+          setCodeSelVal(tmpSels[i]);
+        }
+        document.getElementById("codeCodeSel").required = true;
+        setCodeSelVal(document.getElementById("codeCodeSel"));
+        d3.selectAll(".codeFormSppTR").style("display", "none");
+        d3.select("#codeFormCodeTR").style("display", "table-row");
+      }
+      else {
+        var tmpSels = document.getElementsByClassName("spp");
+        for (let i=0; i<tmpSels.length; i++) {
+          tmpSels[i].required = true;
+          setCodeSelVal(tmpSels[i]);
+        }
+        document.getElementById("codeCodeSel").required = false;
+        setCodeSelVal(document.getElementById("codeCodeSel"));
+        d3.selectAll(".codeFormSppTR").style("display", "table-row");
+        d3.select("#codeFormCodeTR").style("display", "none");
+      }
+    });
+
+
+  //***Set validity for manual reason
+  function setReasonSelVal(tmpSel) { 
+    if(d3.select(tmpSel).property("selectedIndex") > 0 || tmpSel.required == false) {
+      document.getElementById("manualReasonSel").setCustomValidity("");
     }
-    gjCur = d3.select("#featSel").property("selectedIndex");
-    gjCurName = pgFeatLayerNames[gjCur];
-    if(gjCur != 0) {
-      map.addLayer(gjLayers[gjCur]); 
+    else {
+      tmpSel.setCustomValidity("A reason must be selected");
     }
   }
 
-  tmpSel.selectAll("option")
-    .data(featLayers)
-    .enter()
-      .append("option")
-      .attr("value", function(d,i) { return pgFeatLayerNames[i]; })
-      .attr("data-i", function(d,i) { return i; })
-      .property("disabled", function(d, i) { if(i==0) {return "disabled";} })
-      .text(function(d,i) { return featLayers[i]; });
+  //***Set validity for import map selects
+  function setCodeSelVal(tmpSel) { 
+    if(d3.select(tmpSel).property("selectedIndex") > 0 || tmpSel.required == false) {
+      tmpSel.setCustomValidity("");
+    }
+    else {
+      tmpSel.setCustomValidity("A field must be selected");
+    }
+  }
 
 
-  var critLayers = ["", "Land Cover", "Impervious Surface", "Tree Canopy", "Elevation", "Solar Gain", "Consec. Years Pest Damage"];
-  critUsed = [];
+  //***Add file upload function
+  const ImportRead = new FileReader();
+  fileImport = "";
 
-  tmpSel = d3.select("#critLayerSel")
-    .on("change", function() { });
+  //***Read import file
+  ImportRead.onload = function(event) {
+    fileImport = event.target.result;
+    const allLines = fileImport.split(/\r?\n/);
+    var tmpFields = allLines[0].split(",");
+    tmpFields.splice(0,0,"Select field...");
 
-  tmpSel.selectAll("option")
-    .data(critLayers)
-    .enter()
-      .append("option")
-      .attr("value", function(d) { return d; })
-      //.property("disabled", function(d, i) { if(i==0) {return "disabled";} })
-      .text(function(d,i) { return critLayers[i]; });
+    //***Add file headers to map select boxes
+    d3.select("#codeForm").selectAll("select").each(function() {
+      d3.select(this).selectAll("option").remove();
+      d3.select(this).selectAll("option")
+        .data(tmpFields)
+        .enter()
+          .append("option")
+          .attr("value", function(d) { return d; })
+          .property("title", function(d) { return d; })
+          .text(function(d) { return d; });
 
-  var opTitle = ["", "Equal to", "Not equal to", "Less than", "Less than or equal to", "Greater than", "Greater than or equal to"];
-  d3.select("#critOpSel").selectAll("option")
-    .data(["", "=", "!=", "<", "<=", ">", ">="])
-    .enter()
-      .append("option")
-      .attr("value", function(d) { return d; })
-      .property("title", function(d, i) { return opTitle[i]; })
-      .text(function(d) { return d; });
+          
+    });
+  }
 
-/*
-  //***Add in RPCCR results to updateDiv
-  d3.select("#updateDiv")
+
+  ImportRead.onerror = (event) => {
+    alert(event.target.error.name);
+  };
+
+  //***Read in file and add field names to mapping selects
+  d3.select("#codeFile")
+    .on("change", function() {
+      ImportRead.readAsText(document.getElementById("codeFile").files[0]);
+    });
+
+
+  d3.select("#codeFileUpload")
+    .on("click", function() {
+      if(d3.select("#codeFile").property("value") == "") {
+        alert("Please select a file to upload");
+      }
+      else {
+        ImportRead.readAsText(document.getElementById("codeFile").files[0]);
+      }
+
+    });
+
+
+
+
+
+
+
+  //******Make div for edit confirmation
+  d3.select("body")
     .append("div")
-    .attr("id", "resultsDiv")
-    .html('<h5 class="legTitle">Results<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Updating Site Results</b></u></p><p>List of planting location result layers for viewing, comparing, and downloading.</p>"</span></h5><div id="resLeg"><p><span class="fa fa-square" style="color:#000000;margin:0;"></span> = Meets (101)<span class="fa fa-square" style="color:#33bbff;margin-left:10px;"></span> = Fails (100)</p></div><div id="rpccrDiv"></div>');
- */
+    .attr("class", "legend gradDown")
+    .attr("id", "confirmDiv");
+
+  $('#confirmDiv').draggable({containment: "html", cancel: ".toggle-group,input,textarea,button,select,option"});
+
+  d3.select("#confirmDiv")
+    .append("h4")
+    .text("Confirm Edits")
+    .attr("class", "legTitle")
+    .attr("id", "confirmTitle")
+    .append("span")
+    .html('<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Confirm Edits</b></u></p><p>Review proposed edits and uncheck any that you do not wish to make</p>"</span>');
+ 
+  d3.select("#confirmTitle")
+    .html(d3.select("#confirmTitle").html() + '<div class="exitDiv"><span id="hideConfirm" class="fa fa-times-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p>Click to hide window</p>"</span></div>'); 
+
+  d3.select("#hideConfirm")
+    .on("click", function() { toolWindowToggle("confirm"); });
+
+  d3.select("#confirmDiv")
+    .append("div")
+    .attr("id", "confirmEditsDiv")
+    .html('<table id="confirmTable">'
+      + '<thead>'
+        + '<tr>'
+          + '<th>Feature ID</th><th>Current Code</th><th>New Code</th><th>Make Edit</th>'
+        + '</tr>'
+      + '</thead>'
+      + '<tbody></tbody>'
+    );
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1029,7 +1330,7 @@ function initPage() {
 
 
   //******Set z-indexes of moveable divs so that clicked one is always on top
-  d3.selectAll("#legendDiv,#infoDiv,#locateDiv,#updateDiv,#downloadDiv")
+  d3.selectAll("#legendDiv,#infoDiv,#locateDiv,#updateDiv,#downloadDiv,#catchDiv,#confirmDiv")
     .on("mousedown", function() { setZ(this); });
 
 
@@ -1178,7 +1479,8 @@ function initPage() {
         .attr("class", "helpDivs")
         .attr("id", "help-sources")
         .html('<h3>Datasets</h3>'
-          + '<p>A list of sources for raster and polygon layers.</p><br>'
+          + '<p>A list of sources for polygon layers.</p><br>'
+/*
           + '<h4>Raster Layers</h4>'
           + '<table>'
             + '<tr><th>Name</th><th>Source</th><th>Download</th></tr>'
@@ -1191,16 +1493,17 @@ function initPage() {
             + '<tr><td>Consecutive Years Pest Damage</td><td><a href="mailto:jcoombs@umass.edu" target="_blank">Jason Coombs</a>, University of Massachusetts Amherst</td><td><a href="layers/consec_years_pest_damage.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
           + '</table>'
           + '<br>'
+*/
           + '<h4>Polygon Layers</h4>'
           + '<table>'
             + '<tr><th>Name</th><th>Source</th><th>Download</th></tr>'
-            + '<tr><td>National Forests</td><td><a href="https://data.fs.usda.gov/geodata/edw/datasets.php" target="_blank">Forest Service Geodata Clearinghouse</a></td><td><a href="layers/national_forests_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
+            //+ '<tr><td>National Forests</td><td><a href="https://data.fs.usda.gov/geodata/edw/datasets.php" target="_blank">Forest Service Geodata Clearinghouse</a></td><td><a href="layers/national_forests_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
             + '<tr><td>Counties</td><td><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html" target="_blank">United States Census Bureau</a></td><td><a href="layers/counties_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
             + '<tr><td>HUC-8</td><td><a href="https://datagateway.nrcs.usda.gov/GDGOrder.aspx" target="_blank">USDA Geospatial Data Gateway</a></td><td><a href="layers/huc_8_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
             + '<tr><td>HUC-10</td><td><a href="https://datagateway.nrcs.usda.gov/GDGOrder.aspx" target="_blank">USDA Geospatial Data Gateway</a></td><td><a href="layers/huc_10_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
             + '<tr><td>HUC-12</td><td><a href="https://datagateway.nrcs.usda.gov/GDGOrder.aspx" target="_blank">USDA Geospatial Data Gateway</a></td><td><a href="layers/huc_12_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
             + '<tr><td>Streams NHD 1:24k</td><td><a href="http://prd-tnm.s3-website-us-west-2.amazonaws.com/?prefix=StagedProducts/Hydrography/NHD/State/HighResolution/GDB/" target="_blank">National Hydrography Dataset</a></td><td><a href="layers/nhd_streams_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
-            + '<tr><td>Lakes</td><td><a href="http://prd-tnm.s3-website-us-west-2.amazonaws.com/?prefix=StagedProducts/Hydrography/NHD/State/HighResolution/GDB/" target="_blank">National Hydrography Dataset</a></td><td><a href="layers/nhd_lakes_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
+            //+ '<tr><td>Lakes</td><td><a href="http://prd-tnm.s3-website-us-west-2.amazonaws.com/?prefix=StagedProducts/Hydrography/NHD/State/HighResolution/GDB/" target="_blank">National Hydrography Dataset</a></td><td><a href="layers/nhd_lakes_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
           + '</table>'
         );
 /*
@@ -1228,7 +1531,7 @@ function initPage() {
        d3.select("#aboutDiv")
          .append("div")
          .attr("id", "helpFunding")
-         .html('<div id="fundingLeftImg"><a href="https://www.glri.us/" target="_blank"><img id="glri" src="images/glri.jpg" title="Great Lakes Restoration Initiative"></a><a href="https://www.usda.gov/" target="_blank"><img id="usda" src="images/usda.png" title="US Department of Agriculture"></a></div><div id="fundingRightImg"><a href="https://www.fs.usda.gov/" target="_blank"><img id="usfs" src="images/shield_color.png" title="US Forest Service"></a><a href="https://www.umass.edu/" target="_blank"><img id="UMass" src="images/umass_amherst.png" title="University of Massachusetts"></a></div><p id="funders">Principle funding for this tool was contributed by the <a class="fundA" href="https://glri.us/" title="https://glri.us/" target="_blank">Great Lakes Restoration Initiative</a><br><br>Additional support was provided by: <a class="fundA" href="https://www.fs.usda.gov/ottawa" title="https://www.fs.usda.gov/ottawa" target="_blank">US Forest Service: Ottawa National Forest</a> | <a class="fundA" href="https://www.nrs.fs.fed.us/" title="https://www.nrs.fs.fed.us/" target="_blank">US Forest Service: Northern Research Station</a> | <a class="fundA" href="https://www.umass.edu/" title="https://www.umass.edu/" target="_blank">University of Massachusetts, Amherst</a></p>');
+         .html('<div id="fundingLeftImg"><a href="https://easternbrooktrout.org/" target="_blank"><img id="ebtjv" src="images/ebtjv_logo_name.jpg" title="Eastern Brook Trout Joint Venture"></a></div><div id="fundingRightImg"><a href="https://www.nrs.fs.fed.us/" target="_blank"><img id="usfs" src="images/shield_color.png" title="US Forest Service"></a><a href="https://www.umass.edu/" target="_blank"><img id="UMass" src="images/umass_amherst.png" title="University of Massachusetts"></a></div><p id="funders">Principle funding for this tool was contributed by the <a class="fundA" href="https://easternbrooktrout.org/" title="https://glri.us/" target="_blank">Eastern Brook Trout Joint Venture</a><br><br>Additional support was provided by: <a class="fundA" href="https://www.nrs.fs.fed.us/" title="https://www.nrs.fs.fed.us/" target="_blank">US Forest Service: Northern Research Station</a> | <a class="fundA" href="https://www.umass.edu/" title="https://www.umass.edu/" target="_blank">University of Massachusetts, Amherst</a></p>');
          //.html('<div id="fundingLeftImg"><a href="https://www.fs.usda.gov/ottawa" target="_blank"><img id="usfs" src="images/shield_color.png" title="US Forest Service: Ottawa National Forest"></a></div><div id="fundingRightImg"><a href="https://www.umass.edu/" target="_blank"><img id="UMass" src="images/umass_amherst.png" title="University of Massachusetts"></a></div><p id="funders">This project was funded by the <a href="https://www.fs.usda.gov/ottawa" target="_blank">US Forest Service - Ottawa National Forest</a><br><br>Additional support was provided by the <a href="https://www.umass.edu/" target="_blank">University of Massachusetts, Amherst</a>.</p>');
 
 
@@ -1289,6 +1592,10 @@ function initPage() {
     var tmpUrl = 'https://ecosheds.org/geoserver/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetFeatureInfo&LAYERS=' + tmpLayers + '&QUERY_LAYERS=' + tmpLayers + '&BBOX=' + tmpStr + '&FEATURE_COUNT=' + (i * 5) + '&HEIGHT=' + tmpHeight + '&WIDTH=' + tmpWidth + '&INFO_FORMAT=application/json&CRS=EPSG:4326&i=' + tmpI + '&j=' + tmpJ;
     //console.log(tmpUrl);
 
+    //var catchTitles = {"areasqkm": "Area (km^2)", "catch_cnt": "Catchment Count", "changed_from": "Changed From", "comment": "Comments", "cum_length": "Cumulative Length (km)", "dam": "Dam Present", "ebtjv_code": "EBTJV Code", "edit_date": "Date Edited", "editor": "Editor", "featureid": "Feature ID", "reason": "Reason", "samp_dist": "Sample Distance (m)", "samp_loc": "Sample Location", "samp_oid": "Sample OID", "samp_year": "Sample Year", "state": "State", "str_order": "Stream Order", "val_change": "Validation Change", "val_reason": "Validation Reason"};
+    var catchInfo = {"featureid": "Feature ID", "ebtjv_code": "EBTJV Code", "samp_year": "Sample Year", "state": "State", "str_order": "Stream Order", "catch_cnt": "Catchment Count", "dam": "Dam Present", "samp_loc": "Sample Location", "samp_dist": "Sample Distance (m)", "areasqkm": "Area (km^2)", "cum_length": "Cumulative Length (km)", "samp_oid": "Sample OID", "comment": "Comments"};
+    var catchEdit = { "prior_code": "Prior Code", "prior_year": "Prior Year", "reason": "Reason", "latest_sample": "Latest Sample", "editor": "Editor", "edit_date": "Date Edited", "prior_edits": "Prior Edits"}; 
+
     //send the request using jQuery $.ajax
     $.ajax({
       url: tmpUrl,
@@ -1302,6 +1609,60 @@ function initPage() {
           var tmpID = tmpFeat.id.split(".")[0];
           if(tmpID != "") {
             addInfo(tmpID, tmpFeat.properties[infoIDField[tmpID]]);
+
+            //***Add catchment info to div and display
+            if(tmpID == "ebtjv_catchments_current") {
+              d3.select("#catchInfoTable").select("tbody").selectAll("tr").remove();
+              var tmpCatch = d3.keys(catchInfo);
+              var tmpEdit = d3.keys(catchEdit);
+              var tmpMap = tmpCatch.concat(tmpEdit);
+              d3.select("#catchInfoTable").select("tbody").selectAll("tr")
+                .data(tmpMap)
+                .enter()
+                  .append("tr")
+                  .attr("class", function(d) { if(tmpEdit.indexOf(d) > -1) { return "editTR"; } })
+                  .html(function(d) { 
+                    if(tmpCatch.indexOf(d) > -1) {
+                      return '<td>' + catchInfo[d] + '</td><td>' + tmpFeat.properties[d] + '</td>'; 
+                    }
+                    else {
+                      if(d == "latest_sample" || d == "edit_date") {
+                        if(tmpFeat.properties[d] == null) {
+                          var tmpDate = "";
+                        }
+                        else {
+                          var tmpDate = tmpFeat.properties[d].slice(5,7) + "/" + tmpFeat.properties[d].slice(8,10) + "/" + tmpFeat.properties[d].slice(0,4);
+                        }
+                        return '<td>' + catchEdit[d] + '</td><td>' + tmpDate + '</td>';
+                      }
+                      else {
+                        if(tmpFeat.properties[d] == null) {
+                          var tmpProp = "";
+                        }
+                        else {
+                          var tmpProp = tmpFeat.properties[d];
+                        }
+                        return '<td>' + catchEdit[d] + '</td><td>' + tmpProp + '</td>';                      
+                      }
+                    }
+                  });
+
+              if(d3.select("#catchDiv").style("opacity") == 0) {
+                toolWindowToggle("catch");
+              }
+
+              //***Add geoJSON
+              if(editFeat != null) {
+                map.removeLayer(editFeat);
+              }
+              editFeat = L.geoJSON(tmpFeat, { style: polyLayer });
+              map.addLayer(editFeat);
+
+              //***Add feature id to manual edit form if selected and visible
+              if(d3.select("#updateDiv").style("opacity") == 1 && d3.select("#methodSel").property("value") == "Manual Edit") {
+                d3.select("#manualFeat").property("value", tmpFeat.properties.featureid);
+              }
+            }
           }
           else if(tmpID == "") {
             if(typeof tmpFeat.properties.PALETTE_INDEX !== "undefined") {
@@ -1385,7 +1746,7 @@ function resizeTooltip() {
 //******Adjust div position to ensure that it isn't overflowing window
 function resizePanels() {
   var bodyRect = document.body.getBoundingClientRect();
-  var tmpWindows = ["infoDiv", "updateDiv", "locateDiv", "legendDiv", "downloadDiv"];
+  var tmpWindows = ["infoDiv", "updateDiv", "locateDiv", "legendDiv", "downloadDiv", "catchDiv", "confirmDiv"];
         
   tmpWindows.forEach(function(win) {
     var winRect = document.getElementById(win).getBoundingClientRect();
@@ -1403,116 +1764,173 @@ function resizePanels() {
 
 
 
-//******Add criteria for search location query
-function addCrit(tmpForm) {
-  var tmpOpts = String(tmpForm.critLayer.selectedIndex) + String(tmpForm.critOp.selectedIndex);
-  for(obj in infoObj) {
-    if(infoObj[obj] == tmpForm.critLayer.value) {
-      var tmpLayer = obj;
-      break;
-    }
+//******Manually edit catchment
+function manualEdit(tmpForm) {
+  if(accessToken == "") { 
+    alert("You must be logged in to make edits"); 
+    return; 
   }
 
-  var tmpRet = false;
-  critUsed.some(function(obj) {
-    if(obj.layer.includes(tmpLayer)) {
-      alert("A criteria has already been specified for this layer. Please remove the existing criteria and add an updated one.");
-      tmpRet = true;
-    }
-    /*
-    if(obj.key == tmpOpts) {
-      alert("This layer and operator combination is already specified. Please remove the existing criteria and add an updated one.");
-      tmpRet = true;
-    }
-    */
-    return obj.key == tmpOpts;
-  });
+  var tmpFeat = tmpForm.manualFeat.value;
+  var tmpCode = tmpForm.manualCode.value;
+  var tmpDate = new Date(tmpForm.manualSampDate.value);
+  var tmpYear = tmpDate.getFullYear();
+  tmpDate = tmpForm.manualSampDate.value;
+  if(tmpForm.manualReason.value == "old") {
+    var tmpReason = tmpForm.manualReasonSel.value;
+  }
+  else {
+    var tmpReason = tmpForm.manualReasonText.value;
+  }
+  var tmpExtend = tmpForm.manualExtend.value;
   
-  if(tmpRet == true) { return; }
+  socket.emit("edit", {"feat": tmpFeat, "code": tmpCode, "sampDate": tmpDate, "sampYear": tmpYear, "reason": tmpReason, "extend": tmpExtend, "user": curUser, "token": accessToken, "curLine": 0, "totLines": 0});
 
-  critUsed.push({"key": tmpOpts, "layer": tmpLayer, "option": tmpForm.critOp.value, "value": tmpForm.critVal.value});
-
-  var tmpDiv = d3.select("#critAddedDiv");
-  tmpDiv.insert("div", ":first-child")
-    .attr("id", "critAddedDiv_" + tmpOpts)
-    .attr("class", "critAddedDiv")
-    .html('<p class="critAddedP">' + tmpForm.critLayer.value + " " + tmpForm.critOp.value + " " + tmpForm.critVal.value + '<span class="critRemove fa fa-times-circle" data-opts="' + tmpOpts + '" onclick="removeCrit(this)" title="Remove this criteria"></span></p>');
-
-  tmpDiv.style("display", "block");
-
-  d3.selectAll("#critLayerSel,#critOpSel").property("selectedIndex", 0);
-  d3.select("#critValInp").property("value", "");
+/*
   d3.select("#progBar")
     .attr("aria-valuenow", 0)
     .style("width", "0%")
     .text("0%");
   d3.select("#progBarDiv").style("display", "none");
+*/
 }
 
 
-//******Remove individual criteria
-function removeCrit(tmpSpan) {
-  var tmpOpts = d3.select(tmpSpan).attr("data-opts");
-  var tmpDiv = "critAddedDiv_" + tmpOpts;
-  d3.select("#" + tmpDiv).remove();
-  critUsed.some(function(tmpObj, i) {
-    if(tmpObj.key == tmpOpts) {
-      critUsed.splice(i,1);
-      if(critUsed.length == 0) {
-        d3.select("#critAddedDiv").style("display", "none");
+
+
+//******Edit catchments using CSV file
+function importEdit(tmpForm) {
+  if(accessToken == "") { 
+    alert("You must be logged in to make edits"); 
+    return; 
+  }
+
+  var tmpLocate = tmpForm.codeLocID.value;
+  var tmpClassify = tmpForm.codeClassify.value;
+  var tmpExtend = tmpForm.codeExtend.value;
+  if(tmpLocate == "coordinates") {
+    var tmpMapLat = tmpForm.codeLatSel.value;
+    var tmpMapLong = tmpForm.codeLongSel.value;
+  }
+  else {
+    var tmpFeat = tmpForm.codeFeatSel.value;
+  }
+  if(tmpClassify == "ebtjv_code") {
+    var tmpCode = tmpForm.codeCodeSel.value;
+  }
+  else {
+    var tmpBkt = tmpForm.codeBktSel.value;
+    var tmpBnt = tmpForm.codeBntSel.value;
+    var tmpRbt = tmpForm.codeRbtSel.value;
+    var tmpBktStocked = tmpForm.codeBktStockedSel.value;
+  }    
+  var tmpDate = tmpForm.codeDateSel.value;
+  var tmpReason = tmpForm.codeReasonSel.value;
+
+  //***Convert raw species presence if necessary
+  if(tmpClassify == "raw_data") {
+    var tmpCode = "EBTJV Code";
+    var allLines = fileImport.split(/\r?\n/);
+    const tmpFields = allLines[0].split(",");
+    //***Remove empty lines
+    allLinesClean = allLines.filter(function(tmpLine) { return tmpLine != ""; });
+    newFileImport = "";
+
+    allLinesClean.forEach(function(tmpLine, i) {
+      var lineArray = tmpLine.split(",");
+      if(i == 0) {
+        tmpFields.push("EBTJV Code");
+        lineArray.push("EBTJV Code");
       }
-    }
-    return tmpObj.key == tmpOpts;
+      else {
+        if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+          lineArray.push("1.4");
+        }
+        else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+          lineArray.push("1.3");
+        }
+        else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+          lineArray.push("1.2");
+        }
+        else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+          lineArray.push("1.1");
+        }
+        else if(lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+          lineArray.push("0.4");
+        }
+        else if(lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+          lineArray.push("0.3");
+        }
+        else if(lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+          lineArray.push("0.2");
+        }
+        else if(lineArray[tmpFields.indexOf(tmpBktStocked)] > 0) {
+          lineArray.push("0.5");
+        }
+        else {
+          lineArray.push("0");
+        }
+      }
+      newFileImport += lineArray.join(",") + "\n";
+    });
+    fileImport = newFileImport;
+  }
+
+  if(tmpLocate == "coordinates") {
+    var allLines = fileImport.split(/\r?\n/);
+    const tmpFields = allLines[0].split(",");
+    allLines.splice(0,1);
+    //***Remove empty lines
+    allLinesClean = allLines.filter(function(tmpLine) { return tmpLine != ""; });
+
+    var tmpPoints = [];
+    allLinesClean.forEach(function(tmpLine, i) {
+      var lineArray = tmpLine.split(",");
+      tmpPoints.push({"lat": lineArray[tmpFields.indexOf(tmpMapLat)], "long": lineArray[tmpFields.indexOf(tmpMapLong)]});
+    });
+
+    socket.emit("get_featureid", {"coords": tmpPoints, "user": curUser});
+  }
+  else {
+    var tmpData = {"tmpLocate": tmpLocate, "tmpClassify": tmpClassify, "tmpExtend": tmpExtend, "tmpFeat": tmpFeat, "tmpCode": tmpCode, "tmpDate": tmpDate, "tmpReason": tmpReason};
+    doEdits(tmpData);
+  }
+
+
+/*
+  d3.select("#progBar")
+    .attr("aria-valuenow", 0)
+    .style("width", "0%")
+    .text("0%");
+  d3.select("#progBarDiv").style("display", "none");
+*/
+}
+
+
+
+
+//******Make the selected edits
+function doEdits(tmpData) {
+  var allLines = fileImport.split(/\r?\n/);
+  const tmpFields = allLines[0].split(",");
+  allLines.splice(0,1);
+  //***Remove empty lines
+  allLinesClean = allLines.filter(function(tmpLine) { return tmpLine != ""; });
+
+  var lineCnt = allLinesClean.length - 1;
+  allLinesClean.forEach(function(tmpLine, i) {
+    var lineArray = tmpLine.split(",");
+    var newDate = new Date(lineArray[tmpFields.indexOf(tmpData.tmpDate)]);
+    var tmpYear = newDate.getFullYear();
+
+    socket.emit("edit", {"feat": lineArray[tmpFields.indexOf(tmpData.tmpFeat)], "code": lineArray[tmpFields.indexOf(tmpData.tmpCode)], "sampDate": lineArray[tmpFields.indexOf(tmpData.tmpDate)], "sampYear": tmpYear, "reason": lineArray[tmpFields.indexOf(tmpData.tmpReason)], "extend": tmpData.tmpExtend, "user": curUser, "token": accessToken, "curLine": i, "totLines": lineCnt});
   });
 }
 
 
-//******Pass selected features and search criteria to socket to run query
-function runQuery() {
-  if(selFeats.length == 0) {
-    alert("No features selected for 'Area Selection'.");
-    return;
-  }
-
-  tmpBi = 0;
-
-  critUsed.some(function(obj, j) {
-    if(obj.layer == "solar_rad_30m_180") {
-      obj.layer = "solar_rad_30m_180_100ft_buf_int";
-      tmpBi = 1;
-      obj.percent = obj.value;
-      critUsed.splice(j,1);
-      critUsed.push(obj);
-    }
-    else if(obj.layer == "solar_rad_30m_180_100ft_buf_int") {
-      tmpBi = 2;
-      critUsed.splice(j,1);
-      critUsed.push(obj);
-    }
-
-    return obj.layer.includes("solar_rad_30m_180");
-  });
-
-  if(tmpBi == 0) {
-    critUsed.push({"key": "55", "layer": "solar_rad_30m_180_100ft_buf_int", "option": ">=", "value": 0, "percent": 0});
-  }
-
-  tmpOid = "";
-  for (var i=0; i<selFeats.length; i++) {
-    if (i == 0) {
-      tmpOid = "(b." + queryIDField[gjCurName] + " = '" + selFeats[0] + "'";
-      }
-    else {
-      tmpOid += " or b." + queryIDField[gjCurName] + " = '" + selFeats[i] + "'";
-      }
-    }
-  tmpOid += ")";
 
 
-  var input = {"layer": gjCurName, "oid": tmpOid, "crit": critUsed};
-  d3.select("#progBarDiv").style("display", "block");
-  socket.emit("get_rid", input);
-}
+
 
 
 //******Store whether the tutorial should be disabled on startup
@@ -1535,7 +1953,6 @@ function startIntro() {
     steps: [
       //0
       { intro: '<b>Welcome to the <span style="font-family:nebulous;color:orangered;font-weight:bold;">EBTJV Catchment Updater</span></b><img src="images/ebtjv_icon.png" style="height:50px;display:block;margin:auto;"></img>This app enables brook trout resource managers to interactively modify and update Eastern Brook Trout Joint Venture catchment classification.<br><hr><div style="text-align:center;"><input type="checkbox" id="disTutChk" onchange="setTut(this)" style="position:relative;top:2.5px;" ' + tmpCheck + '></input><label style="font-size:12px;font-weight:bold;margin-left:5px;">Check to stop tutorial from running on page load</label></div>' },
-/*
       //1
       { element: document.querySelector("#launchIntro"), intro: "To access this guide at any time simply click on the 'Tutorial' link." },
       //2
@@ -1543,7 +1960,8 @@ function startIntro() {
       //3
       { element: document.querySelector("#overlaySelect"), intro: "Use this dropdown menu  to add raster and pologyon overlay layers. Here the HUC 8 polygon layer has been added." },
       //4
-      { element: document.querySelector("#panelTools"), intro: 'These icons are used to show/hide tool windows and assist with manuevering around the map:<ul><li><span class="fa fa-th-list intro-fa"></span> Show/hide map legend window</li><li><span class="fa fa-info intro-fa"></span> Show/hide feature identification window</li><li><span class="fa fa-tree intro-fa"></span> Show/hide Catchment Updater window</li><li><span class="fa fa-search intro-fa"></span> Show/hide map location search window</li><li><span class="fa fa-globe intro-fa"></span> Zoom to full-extent of the map</li></ul>' },
+      { element: document.querySelector("#panelTools"), intro: 'These icons are used to show/hide tool windows and assist with manuevering around the map:<ul><li><span class="fa fa-th-list intro-fa"></span> Show/hide map legend window</li><li><span class="fa fa-info intro-fa"></span> Show/hide feature identification window</li><li><span class="fa fa-pencil-square intro-fa"></span> Show/hide Catchment Updater window</li><li><span class="fa fa-search intro-fa"></span> Show/hide map location search window</li><li><span class="fa fa-globe intro-fa"></span> Zoom to full-extent of the map</li></ul>' },
+/*
       //5
       { element: document.querySelector("#legendDiv"), intro: "The legend window provides the user with:<ul><li>A legend key for each layer</li><li>A slider to change the opacity of the layer (here it is shown at 50%)</li><li>The ability to change the layer order on the map by dragging and dropping</li></ul>" },
       //6
@@ -1573,7 +1991,6 @@ function startIntro() {
 
   intro.onchange(function() { 
     switch (this._currentStep) {
-/*
       case 0:
         revertIntro();
         break;
@@ -1587,14 +2004,15 @@ function startIntro() {
         break;
       case 3:
         revertIntro();
-        $("#layerToggleDiv9").click();
+        $("#layerToggleDiv4").click();
         d3.select("#overlayListDropdown").style("display", "inline-block");
         break;
       case 4:
         revertIntro();
-        $("#layerToggleDiv9").click();
+        $("#layerToggleDiv4").click();
         d3.select("#panelTools").selectAll("span").style("color", "navy");
         break;
+/*
       case 5:
         revertIntro();
         $("#layerToggleDiv9").click();
@@ -1684,8 +2102,8 @@ function startIntro() {
 
 
   function revertIntro() {
-/*    //0
-    map.fitBounds([[41.5,-91],[47.9,-82]]);
+    //0
+    map.fitBounds([[35,-85],[47,-67]]);
     d3.select("#locateDiv").style("opacity", "").style("display", "");
     //1
     d3.select("#launchIntro").style("color", "");
@@ -1696,7 +2114,7 @@ function startIntro() {
     if(d3.select("#layerToggleDiv9").select("span").style("visibility") == "visible") { $("#layerToggleDiv9").click(); };
     //4
     d3.select("#panelTools").selectAll("span").style("color", "");
-    //5
+/*    //5
     d3.select("#legendDiv").style("opacity", "").style("display", "");
     huc8.setOpacity(1);
     //6
@@ -1727,7 +2145,6 @@ function login(tmpForm) {
   if(typeof(tmpForm) != 'undefined') {
     tmpData.email = tmpForm.email_log.value;
     tmpData.password = tmpForm.password_log.value;
-    console.log(tmpData);
     socket.emit("login", tmpData);
   }
 }
@@ -1745,7 +2162,6 @@ function register(tmpForm) {
     tmpData.org = tmpForm.org.value;
     tmpData.email = tmpForm.email.value;
     tmpData.password = tmpForm.password.value;
-    //console.log(tmpData);
     socket.emit("register", tmpData);
     $("#registerClose").click();
     $('#loginModal').modal('hide')
@@ -1754,7 +2170,22 @@ function register(tmpForm) {
 
 //******Variable to hold access token
 var accessToken = "";
+var curUser = "";
 
 //******
 var emailExists = false;
+
+//***Catchment selection layer style
+function polyLayer(feature) {
+  return {
+    fillColor: "white",
+    fillOpacity: 0.01,
+    color: "Fuchsia",
+    weight: map.getZoom()/3
+  };
+}
+
+//***Variable to hold selected feature
+var editFeat = null;
+
 
