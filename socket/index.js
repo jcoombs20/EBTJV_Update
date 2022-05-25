@@ -60,7 +60,7 @@ io.on("connection", function(socket) {
   socket.on("login", function(tmpData) {
     console.log("Logging in " + tmpData.email);
     var tmpQueries = [];
-    tmpQueries.push("SELECT user_pw, user_type, firstname, lastname, validated FROM ebtjv.users WHERE email = '" + tmpData.email + "';");
+    tmpQueries.push("SELECT user_pw, user_type, firstname, lastname, validated, states FROM ebtjv.users WHERE email = '" + tmpData.email + "';");
 
     const pool = new Pool({
       user: "Jason",
@@ -90,7 +90,7 @@ io.on("connection", function(socket) {
           //bcrypt.compare(tmpData.password, hash, function(err, res) {
             if(result == true && results[i].rows[0].validated == true) {
               const accessToken = jwt.sign({ email: tmpData.email,  user_type: results[i].rows[0].user_type, firstname: results[i].rows[0].firstname, lastname: results[i].rows[0].lastname }, accessTokenSecret, { expiresIn: '8h' });
-              socket.emit("login", {"code": 200, "token": accessToken, "firstname": results[i].rows[0].firstname, "lastname": results[i].rows[0].lastname});  //Credentials are valid; 'check' object can be any string, just has to match the 'status' object in the secure code below
+              socket.emit("login", {"code": 200, "token": accessToken, "firstname": results[i].rows[0].firstname, "lastname": results[i].rows[0].lastname, "states": results[i].rows[0].states});  //Credentials are valid; 'check' object can be any string, just has to match the 'status' object in the secure code below
             }
             else if(results[i].rows[0].validated != true) {
               socket.emit("login", {"code": 404, "msg": "User account has not been validated"});  //User and password correct, but account hasn't been validated
@@ -179,8 +179,9 @@ io.on("connection", function(socket) {
               var mailOptions = {
                 from: 'ebtjv.updater@gmail.com',
                 to: tmpData.email,
+                bcc: ['Jason Coombs <jason_coombs@fws.gov>', 'Lori Maloney <lori.maloney@canaanvi.org>'],
                 subject: 'Validate EBTJV Updater Account',
-                text: 'Click on the following link to validate your account and complete your EBTJV Catchment Updater registration: https://ebtjv.ecosheds.org/validate?id=' + val_code
+                text: 'User: ' + tmpData.fname + ' ' + tmpData.lname + '\nOrganization: ' + tmpData.org + '\nEmail: ' + tmpData.email + '\n\nClick on the following link to validate your account and complete your EBTJV Catchment Updater registration: https://ebtjv.ecosheds.org/validate?id=' + val_code
               }
 
               transporter.sendMail(mailOptions, function(error, info) {
@@ -208,6 +209,7 @@ io.on("connection", function(socket) {
     var tmpQueries = [];
     tmpQueries.push("UPDATE ebtjv.users SET validated = true, val_code = '' WHERE val_code = '" + tmpData + "';");
 //UPDATE ebtjv.users SET user_type = 'admin' WHERE email = 'jcoombs@umass.edu';
+//UPDATE ebtjv.users SET states = ARRAY['North Carolina','Virginia','Tennessee','South Carolina'] WHERE email = 'jacob.rash@ncwildlife.org';
 
     const pool = new Pool({
       user: "Jason",
@@ -233,7 +235,7 @@ io.on("connection", function(socket) {
           socket.emit("validate", {"code": 200, "msg": "The user account has been successfully validated, you may now login to your account"});
         }
         else {
-          socket.emit("validate", {"code": 404, "msg": "A problem was encounted validating you user account, email ebtjv.updater@gmail.com to resolve the problem"});
+          socket.emit("validate", {"code": 404, "msg": "A problem was encountered validating your user account. The most likely reason is that it has already been validated, however if you still need assistance please email ebtjv.updater@gmail.com to help resolve the issue."});
         }
       }
     });
@@ -241,10 +243,11 @@ io.on("connection", function(socket) {
 
 
 
-  socket.on("get_reasons", function() {
+  socket.on("get_reasons", function(tmpData) {
     console.log("Getting existing reasons for changing catchment code");
+    console.log(tmpData);
     var tmpQueries = [];
-    tmpQueries.push("SELECT reason FROM gis.ebtjv_catchments_current GROUP BY reason ORDER BY reason;");
+    tmpQueries.push("SELECT reason FROM gis.ebtjv_catchments_current WHERE editor = '" + tmpData.user + "' GROUP BY reason ORDER BY reason;");
 
     const pool = new Pool({
       user: "Jason",
@@ -260,16 +263,60 @@ io.on("connection", function(socket) {
     });
 
     async.parallel(queue, function(err, results) {
-      for(var i in results) {
-        if(results[i].rowCount > 0) {
-          socket.emit("get_reasons", {"code": 200, "data": results[i]});
+      if(typeof results[0] != 'undefined') {
+        for(var i in results) {
+          if(results[i].rowCount > 0) {
+            socket.emit("get_reasons", {"code": 200, "data": results[i]});
+          }
+          else {
+            //socket.emit("sendError", {"code": 401, "msg": "There are currently no reasons present in the ebtjv_catchments_current table"});
+          }
         }
-        else {
-          socket.emit("sendError", {"code": 401, "msg": "There are currently no reasons present in the ebtjv_catchments_current table"});
-        }  
+      }
+      else {
+        //socket.emit("sendError", {"code": 401, "msg": "There are currently no reasons present in the ebtjv_catchments_current table"});
       }
     });    
   });
+
+
+
+  socket.on("check_admin", function(tmpData) {
+    console.log("Verifying user has state permissions for catchment");
+    console.log(tmpData);
+    var tmpQueries = [];
+    tmpQueries.push("SELECT state FROM gis.ebtjv_catchments_current WHERE featureid = '" + tmpData.feat + "';");
+
+    const pool = new Pool({
+      user: "Jason",
+      host: "ecosheds.org",
+      database: "ebtjv",
+      password: "Jason20!",
+      port: 5432,
+    });
+
+    var queue = [];
+    tmpQueries.forEach(function(query,i) {
+      queue.push(pool.query.bind(pool, query));
+    });
+
+    async.parallel(queue, function(err, results) {
+      if(typeof results[0] != 'undefined') {
+        for(var i in results) {
+          if(results[i].rowCount > 0) {
+            socket.emit("check_admin", {"code": 200, "data": results[i], "params": tmpData});
+          }
+          else {
+            socket.emit("sendError", {"code": 401, "msg": "There was no catchment with a feature id of " + tmpData.tmpFeat});
+          }
+        }
+      }
+      else {
+        //socket.emit("sendError", {"code": 401, "msg": "There was no catchment with a feature id of " + tmpData.tmpFeat});
+      }
+    });    
+  });
+
 
 
 
@@ -305,7 +352,6 @@ io.on("connection", function(socket) {
 
 
 
-
   socket.on("get_featureid", function(tmpData) {
     console.log("Delete any existing points in table for this user")
 
@@ -338,7 +384,53 @@ io.on("connection", function(socket) {
 
 
 
+  socket.on("get_codes", function(tmpObj) {
+    console.log(tmpObj);
+    console.log("Get ebtjv code and bounding box for batch edit");
+
+    var tmpWhere = "";
+    tmpObj.tmpFeats.forEach(function(feat,i) {
+      if(i == 0) {
+        tmpWhere = "(featureid = '" + feat + "'";
+      }
+      else {
+        tmpWhere += " OR featureid = '" + feat + "'";
+      }
+    });
+    tmpWhere += ")";
+
+    var tmpQueries = [];
+    tmpQueries.push("SELECT ebtjv_code, featureid, state, ST_AsGeoJSON(ST_Envelope(wkb_geometry)) as bbox FROM gis.ebtjv_catchments_current WHERE " + tmpWhere + ";");
+
+    const pool = new Pool({
+      user: "Jason",
+      host: "ecosheds.org",
+      database: "ebtjv",
+      password: "Jason20!",
+      port: 5432,
+    });
+
+    var queue = [];
+    tmpQueries.forEach(function(query,i) {
+      queue.push(pool.query.bind(pool, query));
+    });
+
+    async.parallel(queue, function(err, results) {
+      for(var i in results) {
+        if(results[i].rowCount > 0) {
+          socket.emit("get_codes", {"code": 200, "data": results[i].rows, "tmpData": tmpObj.tmpData});
+        }
+        else {
+          socket.emit("sendError", {"code": 401, "msg": "Error encounterd getting EBTJV code and bounding box for the following features: " + featArray.toString()});
+        }  
+      }
+    });    
+  });
+
+
+
   socket.on("edit", function(tmpData) {
+    console.log("Authenticating user " + tmpData.user);
     var verToken = authenticateJWT(tmpData.token);
     
     if(verToken.code == 200 && verToken.user.user_type == "admin") {
@@ -376,6 +468,9 @@ io.on("connection", function(socket) {
 
                 socket.emit("edit", {"code": 200, "msg": tmpMsg});
               }
+              else {
+                socket.emit("updateProg", {"percent": Math.round(((parseInt(tmpData.curLine) + 1)/(parseInt(tmpData.totLines) + 1))*100)});
+              }
             }
           }
           else {
@@ -385,7 +480,7 @@ io.on("connection", function(socket) {
       });    
     }
     else if(verToken.code == 200) {
-      socket.emit("sendError", {"code": 200, "msg": "Your account is not a member of the admin group and therefore does not have permission to make edits"});
+      socket.emit("sendError", {"code": 201, "msg": "Your account has been validated, but not approved to make edits.\n\nPlease contact your supervisor to request editing privileges."});
     }
     else {
       socket.emit("sendError", verToken);

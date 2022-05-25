@@ -2,13 +2,9 @@
   float: left;
   height: 100%;
   padding: 7px 3px 5px 3px;
-  cursor: pointer;
+  //cursor: pointer;
   margin-left: 0px;
   margin-right: 0px;
-}
-
-.hcPanelDivs:hover {
-  background: rgba(255,255,255,0.2);
 }
 
 .hcPanelDivs.disabled {
@@ -44,6 +40,11 @@
   //top: 1px;
   color: #b3d9ff;
 }
+
+.hcPanelDivs>span:hover {
+  color: white;
+}
+
 
 #loginNameP {
   display: inline-block;

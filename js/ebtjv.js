@@ -19,6 +19,7 @@ function initPage() {
 
 
   L.control.mousePosition().addTo(map);
+  L.control.scale({ maxWidth: 150, position: 'bottomright' }).addTo(map);
 
   //***Bing geocoder control
   var tmpPoint = new L.marker;
@@ -104,6 +105,7 @@ function initPage() {
         d3.select("#loginNameP").text("");
         accessToken = "";
         curUser = "";
+        adStates = "";
       }
     });
 
@@ -355,7 +357,7 @@ function initPage() {
     maxZoom: 22
   });
 
-  var states = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
+  states = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
     layers: 'ebtjv_updater:ebtjv_states',
     format: 'image/png',
     transparent: true,
@@ -624,6 +626,7 @@ function initPage() {
     if (d3.select("#" + tmpDiv + "Div").style("opacity") == "1") {
       d3.select("#" + tmpDiv + "Div").transition().style("opacity", "0").style("visibility", "hidden");
       d3.select("#hc" + tmpDiv.charAt(0).toUpperCase() + tmpDiv.slice(1) + "Div").property("title", "Click to show " + toggleWords[tmpDiv] + " window");
+      if(tmpDiv == "update") { d3.select("#manualFeat").property("value", ""); }
     }
     else {
       d3.select("#" + tmpDiv + "Div").transition().duration(250).ease(d3.easeCubic).style("opacity", "1").style("display", "block").style("visibility", "visible").on("end", resizePanels);            
@@ -745,11 +748,15 @@ function initPage() {
             + '</tr>' 
             + '<tr>'
             + '<td></td>'
-            + '<td><select id="manualReasonSel" class="filterAttrList minWidth" name="manualReasonSel" title="Select the reason for updating the catchment" required></select><input type="text" id="manualReasonText" class="filterAttrList inputText minWidth" name="manualReasonText" title="Add a new reason for updating the catchment"</input></td>'
+            + '<td><select id="manualReasonSel" class="filterAttrList minWidth" name="manualReasonSel" title="Select the reason for updating the catchment" required><option>Select reason...</option></select><input type="text" id="manualReasonText" class="filterAttrList inputText minWidth" name="manualReasonText" title="Add a new reason for updating the catchment"</input></td>'
             + '</tr>'
             + '<tr>'
             + '<td><label>Extend Upstream: </label></td>'
-            + '<td><input type="radio" id="manualRadYes" class="filterAttrList manualRadio" name="manualExtend" value="yes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment" checked><label class="manualRadioLabel" for="manualRadYes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment">Yes</label></input><input type="radio" id="manualRadNo" class="filterAttrList manualRadio" name="manualExtend" value="no" title="Choose this option to only edit the currently selected catchment"><label class="manualRadioLabel" for="manualRadNo" title="Choose this option to only edit the currently selected catchment">No</label></input></td>'
+            + '<td>'
+              + '<input type="radio" id="manualRadNo" class="filterAttrList manualRadio" name="manualExtend" value="no" title="Choose this option to only edit the currently selected catchment" checked><label class="manualRadioLabel" for="manualRadNo" title="Choose this option to only edit the currently selected catchment">No</label></input>'
+              + '<input type="radio" id="manualRadYes" class="filterAttrList manualRadio" name="manualExtend" value="yes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment"><label class="manualRadioLabel" for="manualRadYes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment">Yes</label></input>'
+              + '<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Extend Upstream</b></u></p><p>A &apos;Yes&apos; selection will extend the current edit to all upstream catchments classified using the same Sample OID and having greater Catchment Count values.</p>" style="position:relative;top:-4px;right:-53px;"></span>'
+            + '</td>'
             + '</tr>'
             + '</table>'
             + '<hr id="updateHR">'
@@ -767,7 +774,7 @@ function initPage() {
           + '<form id="codeForm" action="javascript:;" onsubmit="importEdit(this)">'
             + '<table id="codeTable" class="updateTable">' 
             + '<tr style="border-bottom: 1px solid;">'
-            + '<td colspan="3" style="padding-bottom:5px;"><input type="file" id="codeFile" class="inputText" name="codeFile" accept=".csv" title="Click to select a file" required></input></td>'
+            + '<td colspan="3" style="padding-bottom:5px;"><input type="file" id="codeFile" class="inputText" name="codeFile" accept=".csv,.xlsx" title="Click to select a file" required></input></td>'
             //+ '<td style="text-align:center;"><span id="codeFileUpload" class="fa fa-upload" title="Click to upload the selected file"></span></td>'
             + '</tr>'
             + '<tr class="radTR">'
@@ -778,12 +785,12 @@ function initPage() {
             + '<tr class="radTR">'
             + '<td><label>Classify Catchment: </label></td>'
             + '<td><input type="radio" id="codeRadCodes" class="filterAttrList manualRadio" name="codeClassify" value="ebtjv_code" title="Choose this option to classify catchments using EBTJV codes" checked><label class="manualRadioLabel" for="codeRadCodes" title="Choose this option to classify catchments using EBTJV codes">EBTJV Code</label></input></td>'
-            + '<td><input type="radio" id="codeRadRaw" class="filterAttrList manualRadio" name="codeClassify" value="raw_data" title="Choose this option to classify catchments using salmonid species presence data"><label class="manualRadioLabel" for="codeRadRaw" title="Choose this option to classify catchments using salmonid species presence data">Species Presence</label></input></td>'
+            + '<td><input type="radio" id="codeRadRaw" class="filterAttrList manualRadio" name="codeClassify" value="raw_data" title="Choose this option to classify catchments using salmonid species presence data.\nUse 0 or an empty cell to indicate not present, and any integer > 0 to indicate present."><label class="manualRadioLabel" for="codeRadRaw" title="Choose this option to classify catchments using salmonid species presence data.\nUse 0 or an empty cell to indicate not present, and any integer > 0 to indicate present.">Species Presence</label></input></td>'
             + '</tr>'
             + '<tr class="radTR" style="border-bottom: 1px solid;">'
             + '<td style="padding-bottom:5px;"><label>Extend Upstream: </label></td>'
-            + '<td><input type="radio" id="codeRadYes" class="filterAttrList manualRadio" name="codeExtend" value="yes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment" checked><label class="manualRadioLabel" for="codeRadYes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment">Yes</label></td>'
-            + '<td></input><input type="radio" id="codeRadNo" class="filterAttrList manualRadio" name="codeExtend" value="no" title="Choose this option to only edit the catchments in the file"><label class="manualRadioLabel" for="codeRadNo" title="Choose this option to only edit the catchments in the file">No</label></input></td>'
+            + '<td><input type="radio" id="codeRadNo" class="filterAttrList manualRadio" name="codeExtend" value="no" title="Choose this option to only edit the catchments in the file" checked><label class="manualRadioLabel" for="codeRadNo" title="Choose this option to only edit the catchments in the file">No</label></input></td>'
+            + '<td></input><input type="radio" id="codeRadYes" class="filterAttrList manualRadio" name="codeExtend" value="yes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment"><label class="manualRadioLabel" for="codeRadYes" title="Choose this option to extend the current edit to upstream catchments that were originally classified using the same sample as the current catchment">Yes</label></td>'
             + '</tr>'
             + '<tr class="radTR">'
             + '<td><label><b>Map the below fields: </b></label></td>'
@@ -820,15 +827,17 @@ function initPage() {
             + '</tr>'
             + '<tr class="codeFormSppTR">'
             + '<td><label>Stocked Brook Trout: </label></td>'
-            + '<td><select id="codeBktStockedSel" class="filterAttrList minwidth spp" name="codeBktStockedSel" title="Select the field in the CSV file that contains stocked brook trout presence data"><option>Select field...</option></select></td>'
+            + '<td><select id="codeBktStockedSel" class="filterAttrList minwidth spp" name="codeBktStockedSel" title="Select the field in the CSV file that contains stocked brook trout presence data" disabled><option>Select field...</option></select></td>'
+            + '<td><input type="checkbox" id="codeBktStockedUse" class="filterAttrList useChkbox" name="codeBktStockedUse" title="Check to use and map a field in the file providing presence of stocked brook trout"></input>'
             + '</tr>'
             + '<tr>'
             + '<td><label>Sample Date: </label></td>'
             + '<td><select id="codeDateSel" class="filterAttrList minwidth" name="codeDateSel" title="Select the field in the CSV file that contains the most recent sample date" required><option>Select field...</option></select></td>'
             + '</tr>'
             + '<tr>'
-            + '<td><label>Reason: </label></td>'
-            + '<td><select id="codeReasonSel" class="filterAttrList minwidth" name="codeReasonSel" title="Select the field in the CSV file that contains the reason for the update" required><option>Select field...</option></select></td>'
+            + '<td><label>Notes: </label></td>'
+            + '<td><select id="codeReasonSel" class="filterAttrList minwidth" name="codeReasonSel" title="Select the field in the CSV file that contains notes about the update" disabled><option>Select field...</option></select></td>'
+            + '<td><input type="checkbox" id="codeReasonUse" class="filterAttrList useChkbox" name="codeReasonUse" title="Check to use and map a field in the file providing notes about the update"></input>'
             + '</tr>'
             + '</table>'
             + '<hr id="updateHR">'
@@ -839,10 +848,11 @@ function initPage() {
         + '</div>'
       + '</div>'
         
-
+/*
       + '<div id="progBarDiv" class="progress">'
         + '<div id="progBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%">0%</div>'
       + '</div>'
+*/
     );
 
 
@@ -852,6 +862,7 @@ function initPage() {
   var tmpSel = d3.select("#methodSel")
     .on("change", function() { 
       d3.selectAll(".updateMethodDiv").style("display", "none");
+      d3.select("#manualFeat").property("value", "");
       var tmpDiv = d3.select(this.options[this.selectedIndex]).attr("data-div");
       d3.select("#" + tmpDiv).style("display", "block");
     });
@@ -886,7 +897,7 @@ function initPage() {
       .text(function(d) { return d; });
 
   //***Populate Reasons select
-  socket.emit("get_reasons");
+  //socket.emit("get_reasons", {"user": curUser});
 
   //***Set reason validity on change
   d3.select("#manualReasonSel")
@@ -991,14 +1002,37 @@ function initPage() {
     }
   }
 
+  //***Enable use checkbox for stocked brook trout
+  d3.selectAll("#codeBktStockedUse")
+    .on("click", function() {
+      if(this.checked == true) {
+        d3.select("#codeBktStockedSel").property("disabled", false);
+      }
+      else {
+        d3.select("#codeBktStockedSel").property("disabled", true);
+      }
+    });
 
-  //***Add file upload function
+  //***Enable use checkbox for reason
+  d3.selectAll("#codeReasonUse")
+    .on("click", function() {
+      if(this.checked == true) {
+        d3.select("#codeReasonSel").property("disabled", false);
+      }
+      else {
+        d3.select("#codeReasonSel").property("disabled", true);
+      }
+    });
+
+
+  //***Add file upload function (csv file)
   const ImportRead = new FileReader();
   fileImport = "";
 
   //***Read import file
   ImportRead.onload = function(event) {
     fileImport = event.target.result;
+    console.log(fileImport);
     const allLines = fileImport.split(/\r?\n/);
     var tmpFields = allLines[0].split(",");
     tmpFields.splice(0,0,"Select field...");
@@ -1023,10 +1057,65 @@ function initPage() {
     alert(event.target.error.name);
   };
 
+
+
+  //***Add file upload function (csv file)
+  const ImportReadXL = new FileReader();
+  workbook = {};
+
+  //***Read import file
+  ImportReadXL.onload = function(event) {
+    var data = event.target.result;
+    workbook = XLSX.read(data, {type: "binary"});
+
+    if(workbook.SheetNames.length == 1) {
+      fileImport = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], {FS:"\t"});
+      fileImport = fileImport.replace(/,/g, ";");
+      fileImport = fileImport.replace(/\t/g, ","); 
+    }
+    else {
+      workbook.SheetNames.forEach(function(sheetName) {
+        fileImport = XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]);
+      });
+    }
+
+
+    const allLines = fileImport.split(/\r?\n/);
+    var tmpFields = allLines[0].split(",");
+    tmpFields.splice(0,0,"Select field...");
+
+    //***Add file headers to map select boxes
+    d3.select("#codeForm").selectAll("select").each(function() {
+      d3.select(this).selectAll("option").remove();
+      d3.select(this).selectAll("option")
+        .data(tmpFields)
+        .enter()
+          .append("option")
+          .attr("value", function(d) { return d; })
+          .property("title", function(d) { return d; })
+          .text(function(d) { return d; });
+
+          
+    });
+
+  }
+
+
+  ImportReadXL.onerror = (event) => {
+    alert(event.target.error.name);
+  };
+
+
+
   //***Read in file and add field names to mapping selects
   d3.select("#codeFile")
     .on("change", function() {
-      ImportRead.readAsText(document.getElementById("codeFile").files[0]);
+      if(document.getElementById("codeFile").files[0].name.toUpperCase().includes("CSV") == true) {
+        ImportRead.readAsText(document.getElementById("codeFile").files[0]);
+      }
+      else if(document.getElementById("codeFile").files[0].name.toUpperCase().includes("XLSX") == true) {
+        ImportReadXL.readAsBinaryString(document.getElementById("codeFile").files[0]);
+      }
     });
 
 
@@ -1075,14 +1164,62 @@ function initPage() {
     .html('<table id="confirmTable">'
       + '<thead>'
         + '<tr>'
-          + '<th>Feature ID</th><th>Current Code</th><th>New Code</th><th>Make Edit</th>'
+          + '<th>Feature ID</th><th>Current Code</th><th>New Code</th><th>Date</th><th>Flag</th><th>Make Edit</th>'
         + '</tr>'
       + '</thead>'
-      + '<tbody></tbody>'
+      + '<tbody id="confirmTbody"></tbody>'
+      + '</table>'
+
+      + '<div id="confirmSubmitDiv">'
+        //+ '<button type="button" id="confirmAllBut" class="formBut btn btn-primary" title="Click to include all edits">Include All</span></button>'
+        + '<button type="button" id="showFlagBut" class="formBut btn btn-primary confirmBut" title="Click to show edits that are flagged (e.g. multiple records for a catchment)">Show Flagged</span></button>'
+        + '<button type="button" id="showDifBut" class="formBut btn btn-primary confirmBut" title="Click to show edits that change the current EBTJV code">Show Changes</span></button>'
+        + '<button type="button" id="showAllBut" class="formBut btn btn-primary confirmBut active" title="Click to show all edits">Show All</span></button>'
+        + '<a id="confirmDownloadA" href="#" download="ebtjv_update_edits.csv"><span id="confirmDownload" class="fa fa-download" title="Click to download currently displayed edits to a CSV file"></span></a>'
+      + '</div>'
+      + '<div>'
+        + '<span id="confirmBack" class="fa fa-mail-reply-all" title="Click to return to previous window"></span>'
+        + '<button type="button" id="makeEditsBut" class="formBut btn btn-primary" title="Click to proceed with included edits">Make Edits</button>'
+      + '</div>'
+      + '<div id="progBarDiv" class="progress">'
+        + '<div id="progBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%">0%</div>'
+      + '</div>'
     );
 
+    //d3.select("#confirmAllBut").on("click", function() { d3.select("#confirmTable").selectAll(".confirmSpan").classed("fa-check-square", true).classed("fa-times-circle", false); });
 
+    d3.select("#showFlagBut").on("click", function() { d3.selectAll(".confirmBut").classed("active", false); d3.select(this).classed("active", true); d3.select("#confirmTable").select("tbody").selectAll("tr").classed("filtered", function() { if(d3.select(this).attr("data-count") == "1") { return true; } else { return false; } }); getConfirmCSV(); });
+    d3.select("#showDifBut").on("click", function() { d3.selectAll(".confirmBut").classed("active", false); d3.select(this).classed("active", true); d3.select("#confirmTable").select("tbody").selectAll("tr").classed("filtered", function() { if(d3.select(this).attr("data-same") == "true" || d3.select(this).select(".confirmSpan").classed("notAllowed") == true) { return true; } else { return false; } }); getConfirmCSV(); });
+    d3.select("#showAllBut").on("click", function() { d3.selectAll(".confirmBut").classed("active", false); d3.select(this).classed("active", true); d3.select("#confirmTable").select("tbody").selectAll("tr").classed("filtered", false); getConfirmCSV(); });
 
+    d3.select("#confirmBack").on("click", function() { toolWindowToggle("confirm"); toolWindowToggle("update"); });
+
+    d3.select("#makeEditsBut").on("click", function() {
+      var lineCnt = -1;
+      d3.select("#confirmTable").select("tbody").selectAll("tr").each(function(tr, i) {
+        if(d3.select("#confirmSpan_" + i).classed("fa-check-square") == true) {
+          lineCnt += 1;
+        }
+      });
+
+      if(lineCnt >= 0) {
+        d3.select("#progBarDiv").style("display", "block");
+        var curLine = -1;
+        d3.select("#confirmTable").select("tbody").selectAll("tr").each(function(tr, i) {
+          if(d3.select("#confirmSpan_" + i).classed("fa-check-square") == true) {
+            var tmpData = JSON.parse(d3.select(this).attr("data-edit"));
+            tmpData.totLines = lineCnt;
+            curLine += 1;
+            tmpData.curLine = curLine;
+            console.log(tmpData);
+            socket.emit("edit", tmpData);
+          }
+        });
+      }
+      else {
+        alert("There are no records selected to be updated.");
+      }
+    });
 
 
 
@@ -1293,7 +1430,7 @@ function initPage() {
       .attr("id", tmpName + "LegendSlider")
       .property("title", tmpTitle + " Layer Opacity: " + tmpOpa * 100 + "%");
 
-    $("#" + tmpName + "LegendSlider").slider({animate: "fast", min: 0, max: 100, value: tmpOpa * 100, slide: function(event, ui) { layerOpacity(ui, tmpLayer); } });
+    $("#" + tmpName + "LegendSlider").slider({animate: "fast", min: 0, max: 100, value: tmpOpa * 100, slide: function(event, ui) { layerOpacity(ui, tmpLayer, tmpName + "LegendSlider", tmpTitle); } });
 
     d3.select("#legendDefault").style("display", "none");
 
@@ -1320,9 +1457,9 @@ function initPage() {
 
 
   //******Change transparency of current legend layer
-  function layerOpacity(tmpSlider, tmpLayer) {
+  function layerOpacity(tmpSlider, tmpLayer, tmpEl, tmpTitle) {
     var tmpOpacity = tmpSlider.value/100; 
-    tmpSlider.title = "Opacity: " + tmpSlider.value + "%"; 
+    d3.select("#" + tmpEl).property("title", tmpTitle + " Layer Opacity: " + tmpSlider.value + "%"); 
     tmpLayer.setOpacity(tmpOpacity);
   } 
 
@@ -1379,6 +1516,7 @@ function initPage() {
            + '<br>'
            + '<h3>Quick Start</h3>'
            + '<p>Additional information about a tool or an item can be found by hovering over the <span class="fa fa-info-circle" title="A tooltip displaying additional details appears upon hovering over most elements."></span> icon or the object itself to display a tooltip.</p>'
+/*
            + '<p><b>Step 1:</b> Open the Planting Locations window by clicking the <span class="fa fa-tree"></span> icon on the top menu.</p>'
            + '<p><b>Step 2:</b> Select a layer to restrict the area of analysis.</p>'
            + '<p><b>Step 3:</b> Select one or more features (e.g. huc or county) by clicking them on the map (selected features turn blue). To remove a selected feature click that feature again. To remove all selections double click any feature.</p>'
@@ -1394,6 +1532,7 @@ function initPage() {
            + '<li><p>When creating an analysis criteria using the solar gain layer, a percent value between 0 and 100 should be specified. This value is used by the analysis to determine the raw data value by performing the following steps:<ul><li>Acquiring all raw solar gain values within the 100 foot stream buffer that are contained by the selected area features.</li><li>Sorting the acquired raw values by ascending value and returning the value of the item in the list located at the specified percentage.</li></ul></p></li>'
            + '<li><p>The raster layer produced by the analysis is a temporary file stored on the server that will be deleted once the user leaves the website. Since it is a temporary file, the naming convention used for tracking each result layer uses the name of the area selection layer (e.g HUC-12), and the time in seconds since midnight Eastern time (e.g. 9:00 AM = 32400).</p></li>'
            + '</ul>'
+*/
            + '<br>'
            + '<h3>Tool Development Team</h3>'
            + '<ul>'
@@ -1438,7 +1577,7 @@ function initPage() {
            + '<p>Development of this tool is currently ongoing and future updates may include additional area restriction polygons and criteria selection rasters. If you have any questions, encounter any errors, or are interested in applying this tool to your region, please contact Jason Coombs at <a href="mailto:jcoombs@umass.edu">jcoombs@umass.edu</a>.</p>'
            + '<br>'
            + '<h3>Tool Version</h3>'
-           + '<p>v1.0.0 - 09-01-2020</p>'
+           + '<p>v1.0.0 - 04-20-2022</p>'
            + '<ul><li><p>Initial release</p></li></ul>'
          );
 
@@ -1586,15 +1725,15 @@ function initPage() {
     var tmpStr = bbox._southWest.lat + "," + bbox._southWest.lng + "," + bbox._northEast.lat + "," + bbox._northEast.lng;
     var tmpWidth = map.getSize().x;
     var tmpHeight = map.getSize().y;
-    var tmpI = map.layerPointToContainerPoint(e.layerPoint).x;
-    var tmpJ = map.layerPointToContainerPoint(e.layerPoint).y;
+    var tmpI = Math.round(map.layerPointToContainerPoint(e.layerPoint).x);
+    var tmpJ = Math.round(map.layerPointToContainerPoint(e.layerPoint).y);
 
     var tmpUrl = 'https://ecosheds.org/geoserver/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetFeatureInfo&LAYERS=' + tmpLayers + '&QUERY_LAYERS=' + tmpLayers + '&BBOX=' + tmpStr + '&FEATURE_COUNT=' + (i * 5) + '&HEIGHT=' + tmpHeight + '&WIDTH=' + tmpWidth + '&INFO_FORMAT=application/json&CRS=EPSG:4326&i=' + tmpI + '&j=' + tmpJ;
-    //console.log(tmpUrl);
+    console.log(tmpUrl);
 
     //var catchTitles = {"areasqkm": "Area (km^2)", "catch_cnt": "Catchment Count", "changed_from": "Changed From", "comment": "Comments", "cum_length": "Cumulative Length (km)", "dam": "Dam Present", "ebtjv_code": "EBTJV Code", "edit_date": "Date Edited", "editor": "Editor", "featureid": "Feature ID", "reason": "Reason", "samp_dist": "Sample Distance (m)", "samp_loc": "Sample Location", "samp_oid": "Sample OID", "samp_year": "Sample Year", "state": "State", "str_order": "Stream Order", "val_change": "Validation Change", "val_reason": "Validation Reason"};
     var catchInfo = {"featureid": "Feature ID", "ebtjv_code": "EBTJV Code", "samp_year": "Sample Year", "state": "State", "str_order": "Stream Order", "catch_cnt": "Catchment Count", "dam": "Dam Present", "samp_loc": "Sample Location", "samp_dist": "Sample Distance (m)", "areasqkm": "Area (km^2)", "cum_length": "Cumulative Length (km)", "samp_oid": "Sample OID", "comment": "Comments"};
-    var catchEdit = { "prior_code": "Prior Code", "prior_year": "Prior Year", "reason": "Reason", "latest_sample": "Latest Sample", "editor": "Editor", "edit_date": "Date Edited", "prior_edits": "Prior Edits"}; 
+    var catchEdit = { "prior_code": "Prior Code", "prior_year": "Prior Year", "reason": "Notes", "latest_sample": "Latest Sample", "editor": "Editor", "edit_date": "Date Edited", "prior_edits": "Prior Edits"}; 
 
     //send the request using jQuery $.ajax
     $.ajax({
@@ -1662,6 +1801,13 @@ function initPage() {
               if(d3.select("#updateDiv").style("opacity") == 1 && d3.select("#methodSel").property("value") == "Manual Edit") {
                 d3.select("#manualFeat").property("value", tmpFeat.properties.featureid);
               }
+
+              //***Class cofirm table TR as zoomed if they match the featureid
+              d3.select("#confirmTbody").selectAll("tr").each(function() {
+                d3.select(this).classed("zoomed", function() {
+                  if(d3.select(this).select("td").text() == tmpFeat.properties.featureid) { return true; } else { return false; }
+                });
+              });
             }
           }
           else if(tmpID == "") {
@@ -1776,16 +1922,21 @@ function manualEdit(tmpForm) {
   var tmpDate = new Date(tmpForm.manualSampDate.value);
   var tmpYear = tmpDate.getFullYear();
   tmpDate = tmpForm.manualSampDate.value;
-  if(tmpForm.manualReason.value == "old") {
+  if(tmpForm.manualReason.value == "old") {  //existing reason
     var tmpReason = tmpForm.manualReasonSel.value;
   }
-  else {
+  else {  //new reason
     var tmpReason = tmpForm.manualReasonText.value;
   }
   var tmpExtend = tmpForm.manualExtend.value;
-  
-  socket.emit("edit", {"feat": tmpFeat, "code": tmpCode, "sampDate": tmpDate, "sampYear": tmpYear, "reason": tmpReason, "extend": tmpExtend, "user": curUser, "token": accessToken, "curLine": 0, "totLines": 0});
 
+  //***Confirm user has admin priveleges for state where catchment is located
+  if(adStates.indexOf("All") == -1) {
+    socket.emit("check_admin", {"feat": tmpFeat, "code": tmpCode, "sampDate": tmpDate, "sampYear": tmpYear, "reason": tmpReason, "extend": tmpExtend, "user": curUser, "token": accessToken, "curLine": 0, "totLines": 0, "adStates": adStates});
+  }
+  else {
+    socket.emit("edit", {"feat": tmpFeat, "code": tmpCode, "sampDate": tmpDate, "sampYear": tmpYear, "reason": tmpReason, "extend": tmpExtend, "user": curUser, "token": accessToken, "curLine": 0, "totLines": 0, "adStates": adStates});
+  }
 /*
   d3.select("#progBar")
     .attr("aria-valuenow", 0)
@@ -1809,6 +1960,7 @@ function importEdit(tmpForm) {
   var tmpClassify = tmpForm.codeClassify.value;
   var tmpExtend = tmpForm.codeExtend.value;
   if(tmpLocate == "coordinates") {
+    console.log(tmpForm.codeLatSel.index);
     var tmpMapLat = tmpForm.codeLatSel.value;
     var tmpMapLong = tmpForm.codeLongSel.value;
   }
@@ -1843,38 +1995,87 @@ function importEdit(tmpForm) {
         lineArray.push("EBTJV Code");
       }
       else {
-        if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
-          lineArray.push("1.4");
+        if(d3.select("#codeBktStockedUse").property("checked") == true) {
+          [tmpBkt, tmpBnt, tmpRbt, tmpBktStocked].forEach(function(spp) {
+            if(lineArray[tmpFields.indexOf(spp)].toUpperCase() == "TRUE") { 
+              lineArray[tmpFields.indexOf(spp)] = 1; 
+            }
+            else if(lineArray[tmpFields.indexOf(spp)].toUpperCase() == "FALSE") { 
+              lineArray[tmpFields.indexOf(spp)] = 0; 
+            }
+          });
+
+          if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+            lineArray.push("1.4");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+            lineArray.push("1.3");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+            lineArray.push("1.2");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+            lineArray.push("1.1");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+            lineArray.push("0.4");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+            lineArray.push("0.3");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
+            lineArray.push("0.2");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBktStocked)] > 0) {
+            lineArray.push("0.5");
+          }
+          else {
+            lineArray.push("0");
+          }
         }
-        else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
-          lineArray.push("1.3");
-        }
-        else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
-          lineArray.push("1.2");
-        }
-        else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
-          lineArray.push("1.1");
-        }
-        else if(lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
-          lineArray.push("0.4");
-        }
-        else if(lineArray[tmpFields.indexOf(tmpRbt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
-          lineArray.push("0.3");
-        }
-        else if(lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpBktStocked)] < 1) {
-          lineArray.push("0.2");
-        }
-        else if(lineArray[tmpFields.indexOf(tmpBktStocked)] > 0) {
-          lineArray.push("0.5");
-        }
+        //***No stocked brook trout field provided
         else {
-          lineArray.push("0");
+          [tmpBkt, tmpBnt, tmpRbt].forEach(function(spp) {
+            if(lineArray[tmpFields.indexOf(spp)].toUpperCase() == "TRUE") { 
+              lineArray[tmpFields.indexOf(spp)] = 1; 
+            }
+            else if(lineArray[tmpFields.indexOf(spp)].toUpperCase() == "FALSE") { 
+              lineArray[tmpFields.indexOf(spp)] = 0; 
+            }
+          });
+
+          if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0) {
+            lineArray.push("1.4");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0) {
+            lineArray.push("1.3");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0 && lineArray[tmpFields.indexOf(tmpBnt)] > 0) {
+            lineArray.push("1.2");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBkt)] > 0) {
+            lineArray.push("1.1");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBnt)] > 0 && lineArray[tmpFields.indexOf(tmpRbt)] > 0) {
+            lineArray.push("0.4");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpRbt)] > 0) {
+            lineArray.push("0.3");
+          }
+          else if(lineArray[tmpFields.indexOf(tmpBnt)] > 0) {
+            lineArray.push("0.2");
+          }
+          else {
+            lineArray.push("0");
+          }
         }
       }
       newFileImport += lineArray.join(",") + "\n";
     });
     fileImport = newFileImport;
   }
+
+  toolWindowToggle("update");
 
   if(tmpLocate == "coordinates") {
     var allLines = fileImport.split(/\r?\n/);
@@ -1893,7 +2094,7 @@ function importEdit(tmpForm) {
   }
   else {
     var tmpData = {"tmpLocate": tmpLocate, "tmpClassify": tmpClassify, "tmpExtend": tmpExtend, "tmpFeat": tmpFeat, "tmpCode": tmpCode, "tmpDate": tmpDate, "tmpReason": tmpReason};
-    doEdits(tmpData);
+    selEdits(tmpData);
   }
 
 
@@ -1905,6 +2106,27 @@ function importEdit(tmpForm) {
   d3.select("#progBarDiv").style("display", "none");
 */
 }
+
+
+
+//******Select edits
+function selEdits(tmpData) {
+  var allLines = fileImport.split(/\r?\n/);
+  const tmpFields = allLines[0].split(",");
+  allLines.splice(0,1);
+  //***Remove empty lines
+  allLinesClean = allLines.filter(function(tmpLine) { return tmpLine != ""; });
+
+  var lineCnt = allLinesClean.length - 1;
+  var featArray = [];
+  allLinesClean.forEach(function(tmpLine, i) {
+    var lineArray = tmpLine.split(",");
+    featArray.push(lineArray[tmpFields.indexOf(tmpData.tmpFeat)]);
+  });
+
+  socket.emit("get_codes", {"tmpData": tmpData, "tmpFeats": featArray});
+}
+
 
 
 
@@ -1923,7 +2145,8 @@ function doEdits(tmpData) {
     var newDate = new Date(lineArray[tmpFields.indexOf(tmpData.tmpDate)]);
     var tmpYear = newDate.getFullYear();
 
-    socket.emit("edit", {"feat": lineArray[tmpFields.indexOf(tmpData.tmpFeat)], "code": lineArray[tmpFields.indexOf(tmpData.tmpCode)], "sampDate": lineArray[tmpFields.indexOf(tmpData.tmpDate)], "sampYear": tmpYear, "reason": lineArray[tmpFields.indexOf(tmpData.tmpReason)], "extend": tmpData.tmpExtend, "user": curUser, "token": accessToken, "curLine": i, "totLines": lineCnt});
+    console.log({"feat": lineArray[tmpFields.indexOf(tmpData.tmpFeat)], "code": lineArray[tmpFields.indexOf(tmpData.tmpCode)], "sampDate": lineArray[tmpFields.indexOf(tmpData.tmpDate)], "sampYear": tmpYear, "reason": lineArray[tmpFields.indexOf(tmpData.tmpReason)], "extend": tmpData.tmpExtend, "user": curUser, "token": accessToken, "curLine": i, "totLines": lineCnt, "adStates": adStates});
+    socket.emit("edit", {"feat": lineArray[tmpFields.indexOf(tmpData.tmpFeat)], "code": lineArray[tmpFields.indexOf(tmpData.tmpCode)], "sampDate": lineArray[tmpFields.indexOf(tmpData.tmpDate)], "sampYear": tmpYear, "reason": lineArray[tmpFields.indexOf(tmpData.tmpReason)], "extend": tmpData.tmpExtend, "user": curUser, "token": accessToken, "curLine": i, "totLines": lineCnt, "adStates": adStates});
   });
 }
 
@@ -2009,7 +2232,6 @@ function startIntro() {
         break;
       case 4:
         revertIntro();
-        $("#layerToggleDiv4").click();
         d3.select("#panelTools").selectAll("span").style("color", "navy");
         break;
 /*
@@ -2111,7 +2333,7 @@ function startIntro() {
     d3.select("#baselayerListDropdown").style("display", "");
     //3
     d3.select("#overlayListDropdown").style("display", "");
-    if(d3.select("#layerToggleDiv9").select("span").style("visibility") == "visible") { $("#layerToggleDiv9").click(); };
+    if(d3.select("#layerToggleDiv4").select("span").style("visibility") == "visible") { $("#layerToggleDiv4").click(); };
     //4
     d3.select("#panelTools").selectAll("span").style("color", "");
 /*    //5
@@ -2171,6 +2393,7 @@ function register(tmpForm) {
 //******Variable to hold access token
 var accessToken = "";
 var curUser = "";
+var adStates = "";
 
 //******
 var emailExists = false;
@@ -2180,7 +2403,7 @@ function polyLayer(feature) {
   return {
     fillColor: "white",
     fillOpacity: 0.01,
-    color: "Fuchsia",
+    color: "cyan",
     weight: map.getZoom()/3
   };
 }
@@ -2189,3 +2412,48 @@ function polyLayer(feature) {
 var editFeat = null;
 
 
+//***Make CSV file from confirmTable and add it to download A element
+function getConfirmCSV() {
+  var tmpCSV = "";
+  d3.select("#confirmTable").selectAll("tr").each(function() { 
+    if(d3.select(this).classed("filtered") == false) {
+      if(tmpCSV == "") {
+        d3.select(this).selectAll("th").each(function(d,i) { 
+          if(i == 0) { 
+            tmpCSV += this.innerHTML; 
+          } 
+          else if(i < 6) { 
+            tmpCSV += "," + this.innerHTML; 
+          } 
+        });
+        tmpCSV += "\n";
+      }
+      else {
+        d3.select(this).selectAll("td").each(function(d,i) { 
+          if(i == 0) { 
+            tmpCSV += this.innerHTML; 
+          } 
+          else if(i == 4) {
+            var tmpTitle = "";
+            if(this.innerHTML != "") { tmpTitle = d3.select(this).select("span").property("title").replace("<p>", "").replace("</p>", ""); }
+            tmpCSV += "," + tmpTitle;
+          }
+          else if(i == 5) {
+            if(d3.select(this).select("span").classed("fa-check-square") == true) {
+              tmpCSV += ", Yes";
+            }
+            else {
+              tmpCSV += ", No";
+            }
+          }
+          else if(i < 5) { 
+            tmpCSV += "," + this.innerHTML; 
+          } 
+        });
+        tmpCSV += "\n";
+      }
+    } 
+  });
+
+  d3.select("#confirmDownloadA").attr("href", "data:attachment/csv," + encodeURIComponent(tmpCSV));
+}

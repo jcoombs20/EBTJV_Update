@@ -11,6 +11,33 @@ html, body {
   pointer-events: all;
 }
 
+.leaflet-control-scale-line, .leaflet-control-scale-line:not(:first-child) {
+  background: rgba(255,255,0,0.4);
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 4px;
+  border-color: black;
+  margin: 5px;
+  margin-left: 0px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  color: black;
+  text-align: center;
+}
+
+.leaflet-control-scale-line:hover, .leaflet-control-scale-line:not(:first-child):hover {
+  background: rgba(255,255,0,0.7);
+}
+
+.leaflet-right .leaflet-control {
+  margin-right: 0;
+}
+
+.leaflet-bottom .leaflet-control-scale {
+  margin-bottom: 0;
+}
+
 .introjs-tooltip {
   max-width: 405px;
   width: max-content;
@@ -257,13 +284,9 @@ a {
   top: -3px;
   //height: 40px;
   padding: 7px 3px 5px 3px;
-  cursor: pointer;
+  //cursor: pointer;
   margin-left: 0px;
   margin-right: 0px;
-}
-
-.hcPanelDivs:hover {
-  background: rgba(255,255,255,0.2);
 }
 
 .hcPanelDivs.disabled {
@@ -401,6 +424,16 @@ a {
   min-width: 160px;
 }
 
+#codeForm .useChkbox {
+  position: relative;
+  transform: scale(1.2);
+  top: 3px;
+}
+
+#codeFile {
+  overflow: hidden;
+}
+
 .filterAttrList.inputText {
   cursor: text;
 }
@@ -425,7 +458,7 @@ a {
   cursor: pointer;
 }
 
-#manualRadNew, #manualRadNo {
+#manualRadNew, #manualRadYes {
   margin-left: 25px;
 }
 
@@ -453,11 +486,13 @@ a {
 
 #progBarDiv {
   display: none;
+  border: white solid 1px;
+  height: 20px;
 }
 
 #confirmDiv {
-  top: 85px;
-  left: calc(50% - 194px);
+  top: calc(100% - 438px);
+  left: calc(100% - 547px);
 }
 
 #confirmTable, #confirmTable th, #confirmTable td {
@@ -470,14 +505,128 @@ a {
   border-collapse: collapse;
 }
 
+#confirmTable thead {
+  display: block;
+}
+
 #confirmTable tbody {
   overflow-y: auto;
-  max-height: 300px;
+  max-height: 271px;
+  font-size: 15px;
+  color: #333333;
+  display: block;
+}
+
+#confirmTable tbody tr {
+  background: white;
+}
+
+#confirmTable tbody tr:hover {
+  background: cyan;
+}
+
+#confirmTable tbody tr.filtered {
+  display:none;
+}
+
+#confirmTable tbody tr.zoomed {
+  background: yellow;
+}
+
+#confirmTable tbody tr.zoomed:hover {
+  background: greenyellow;
+}
+
+
+#confirmTable td:nth-child(1) {
+  color: dodgerblue;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#confirmTable td:nth-child(1), #confirmTable th:nth-child(1) {
+  width: 89px;
+}
+
+#confirmTable td:nth-child(2), #confirmTable th:nth-child(2) {
+  width: 111px;
+}
+
+#confirmTable td:nth-child(3), #confirmTable th:nth-child(3) {
+  width: 88px;
+}
+
+#confirmTable td:nth-child(4), #confirmTable th:nth-child(4) {
+  width: 88px;
+}
+
+#confirmTable td:nth-child(5), #confirmTable th:nth-child(5) {
+  width: 43px;
+}
+
+#confirmTable td:nth-child(6), #confirmTable th:nth-child(6) {
+  width: 86px;
+}
+
+#confirmTable .fa-check-square {
+  color: green;
+  font-size: 18px;
+  opacity: 0.6;
+  margin: 0;
+}
+
+#confirmTable .fa-times-circle {
+  color: red;
+  font-size: 18px;
+  opacity: 0.6;
+  margin: 0;
+}
+
+#confirmTable .fa-times-circle.notAllowed {
+  color: black;
+}
+
+#confirmTable .fa-exclamation-triangle {
+  color: orange;
+  font-size: 18px;
+  opacity: 0.6;
+  margin: 0;
+}
+
+#confirmTable .fa-check-square:hover, #confirmTable .fa-times-circle:hover, #confirmTable .fa-exclamation-triangle:hover {
+  opacity: 1;
+}
+
+#confirmSubmitDiv {
+  border-bottom: 1px solid white;
+  margin-bottom: 3px;
+  padding-bottom: 3px;
+}
+
+#confirmDownload {
+  float: right;
+  font-size: 18px;
+  position: relative;
+  top: 11px;
+  margin: 0;
+  padding-right: 5px;
+  color: white;
+}
+
+#confirmBack {
+  float: left;
+  font-size: 18px;
+  position: relative;
+  top: 11px;
+}
+
+.formBut.confirmBut.active {
+  border-color: lime !important;
 }
 
 #infoDiv {
-  top: calc(100% - 100px);
-  left: 10px;
+  top: calc(100% - 83px);
+  left: 122px;
 }
 
 #downloadDiv {
