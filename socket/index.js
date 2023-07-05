@@ -60,7 +60,7 @@ io.on("connection", function(socket) {
   socket.on("login", function(tmpData) {
     console.log("Logging in " + tmpData.email);
     var tmpQueries = [];
-    tmpQueries.push("SELECT user_pw, user_type, firstname, lastname, validated, states FROM ebtjv.users WHERE email = '" + tmpData.email + "';");
+    tmpQueries.push("SELECT user_pw, user_type, firstname, lastname, validated, states FROM ebtjv.users WHERE LOWER(email) = '" + tmpData.email.toLowerCase() + "';");
 
     const pool = new Pool({
       user: "Jason",
@@ -79,23 +79,28 @@ io.on("connection", function(socket) {
       for(var i in results) {
         if(results[i].rowCount > 0) {
           var hash = results[i].rows[0].user_pw;
+          var goodPW = "";
           bcrypt.compare(tmpData.password, hash, function(err, result) {
             if(err) { 
               console.log(err); 
               socket.emit("login", {"code": 500, "check": false});
-            };
+            }
 
-          //var hash = results[i].rows[0].password;
-          //hash = hash.replace(/^\$2y(.+)$/i, '$2a$1');
-          //bcrypt.compare(tmpData.password, hash, function(err, res) {
-            if(result == true && results[i].rows[0].validated == true) {
+            //var tmpHash = results[i].rows[0].password;
+            //tmpHash = hash.replace(/^\$2y(.+)$/i, '$2a$1');
+            //console.log(tmpHash);
+
+            if(result == true && results[i].rows[0].validated == true && results[i].rows[0].user_type != 'registrant') {
               const accessToken = jwt.sign({ email: tmpData.email,  user_type: results[i].rows[0].user_type, firstname: results[i].rows[0].firstname, lastname: results[i].rows[0].lastname }, accessTokenSecret, { expiresIn: '8h' });
               socket.emit("login", {"code": 200, "token": accessToken, "firstname": results[i].rows[0].firstname, "lastname": results[i].rows[0].lastname, "states": results[i].rows[0].states});  //Credentials are valid; 'check' object can be any string, just has to match the 'status' object in the secure code below
             }
             else if(results[i].rows[0].validated != true) {
               socket.emit("login", {"code": 404, "msg": "User account has not been validated"});  //User and password correct, but account hasn't been validated
             }
-            else {
+            else if(results[i].rows[0].user_type == 'registrant' && result == true) {
+              socket.emit("login", {"code": 404, "msg": "User account has not been granted access to view data"});  //User and password correct, but account hasn't been validated
+            }
+            else if(result == false) {
               socket.emit("login", {"code": 404, "msg": "The password is incorrect for this email account"});  //User name is valid but password is not
             }
           });
@@ -152,7 +157,7 @@ io.on("connection", function(socket) {
         var val_code = buffer.toString('hex');
 
         var tmpQueries = [];
-        tmpQueries.push("INSERT INTO ebtjv.users (organization, user_pw, firstname, lastname, email, val_code, user_type) VALUES ('" + tmpData.org + "', '" + hash + "', '" + tmpData.fname + "', '" + tmpData.lname + "', '" + tmpData.email + "', '" + val_code + "', 'member');");
+        tmpQueries.push("INSERT INTO ebtjv.users (organization, user_pw, firstname, lastname, email, val_code, user_type) VALUES ('" + tmpData.org + "', '" + hash + "', '" + tmpData.fname + "', '" + tmpData.lname + "', '" + tmpData.email + "', '" + val_code + "', 'registrant');");
 //DELETE FROM ebtjv.users WHERE email = 'jcoombs@umass.edu';
 
         const pool = new Pool({
@@ -244,8 +249,8 @@ io.on("connection", function(socket) {
 
 
   socket.on("get_reasons", function(tmpData) {
-    console.log("Getting existing reasons for changing catchment code");
-    console.log(tmpData);
+    console.log("Getting existing reasons for changing catchment code for " + tmpData.user);
+    //console.log(tmpData);
     var tmpQueries = [];
     tmpQueries.push("SELECT reason FROM gis.ebtjv_catchments_current WHERE editor = '" + tmpData.user + "' GROUP BY reason ORDER BY reason;");
 
@@ -265,8 +270,48 @@ io.on("connection", function(socket) {
     async.parallel(queue, function(err, results) {
       if(typeof results[0] != 'undefined') {
         for(var i in results) {
-          if(results[i].rowCount > 0) {
+          //if(results[i].rowCount > 0) {
             socket.emit("get_reasons", {"code": 200, "data": results[i]});
+          //}
+          //else {
+            //socket.emit("sendError", {"code": 401, "msg": "There are currently no reasons present in the ebtjv_catchments_current table"});
+          //}
+        }
+      }
+      else {
+        //socket.emit("sendError", {"code": 401, "msg": "There are currently no reasons present in the ebtjv_catchments_current table"});
+      }
+    });    
+  });
+
+
+  //******Get ebtjv_code counts
+  //select ebtjv_code, count(ebtjv_code) from gis.ebtjv_catchments_current where state = 'North Carolina' group by ebtjv_code;
+
+  socket.on("get_latest_update", function() {
+    console.log("Getting most recent update year for each state");
+
+    var tmpQueries = [];
+    tmpQueries.push('SELECT state, max(samp_year) AS max_samp_year FROM gis."ebtjv_catchments_current" WHERE samp_year < 9999 GROUP BY state ORDER BY state;');
+
+    const pool = new Pool({
+      user: "Jason",
+      host: "ecosheds.org",
+      database: "ebtjv",
+      password: "Jason20!",
+      port: 5432,
+    });
+
+    var queue = [];
+    tmpQueries.forEach(function(query,i) {
+      queue.push(pool.query.bind(pool, query));
+    });
+
+    async.parallel(queue, function(err, results) {
+      if(typeof results[0] != 'undefined') {
+        for(var i in results) {
+          if(results[i].rowCount > 0) {
+            socket.emit("get_latest_update", {"code": 200, "data": results[i].rows});
           }
           else {
             //socket.emit("sendError", {"code": 401, "msg": "There are currently no reasons present in the ebtjv_catchments_current table"});
@@ -281,9 +326,10 @@ io.on("connection", function(socket) {
 
 
 
+
   socket.on("check_admin", function(tmpData) {
     console.log("Verifying user has state permissions for catchment");
-    console.log(tmpData);
+    //console.log(tmpData);
     var tmpQueries = [];
     tmpQueries.push("SELECT state FROM gis.ebtjv_catchments_current WHERE featureid = '" + tmpData.feat + "';");
 
@@ -374,7 +420,7 @@ io.on("connection", function(socket) {
     async.parallel(queue, function(err, results) {
       if(err == null) {
         console.log("Deleted " + results[0].rowCount + " points for user " + tmpData.user);
-        addPoints(tmpData);
+        addPoints(tmpData, pool);
       }
       else {
         socket.emit("sendError", {"code": 401, "msg": err});
@@ -385,7 +431,7 @@ io.on("connection", function(socket) {
 
 
   socket.on("get_codes", function(tmpObj) {
-    console.log(tmpObj);
+    //console.log(tmpObj);
     console.log("Get ebtjv code and bounding box for batch edit");
 
     var tmpWhere = "";
@@ -417,7 +463,11 @@ io.on("connection", function(socket) {
 
     async.parallel(queue, function(err, results) {
       for(var i in results) {
-        if(results[i].rowCount > 0) {
+        if(typeof(results[i].rowCount) == 'undefined') {
+          console.log(tmpQueries[0]);
+          socket.emit("sendError", {"code": 401, "msg": "Error encounterd getting EBTJV code and bounding box for the following features: " + featArray.toString()});
+        }
+        else if(results[i].rowCount > 0) {
           socket.emit("get_codes", {"code": 200, "data": results[i].rows, "tmpData": tmpObj.tmpData});
         }
         else {
@@ -430,14 +480,19 @@ io.on("connection", function(socket) {
 
 
   socket.on("edit", function(tmpData) {
-    console.log("Authenticating user " + tmpData.user);
-    var verToken = authenticateJWT(tmpData.token);
+    //console.log(tmpData);
+    console.log("Authenticating user " + tmpData[0].user);
+    var verToken = authenticateJWT(tmpData[0].token);
     
     if(verToken.code == 200 && verToken.user.user_type == "admin") {
       console.log("Editing catchment layer");
-      var tmpQueries = [];
-      tmpQueries.push("UPDATE gis.ebtjv_catchments_current SET prior_code = ebtjv_code, prior_year = samp_year, ebtjv_code = '" + tmpData.code + "', samp_year = " + tmpData.sampYear + ", reason = '" + tmpData.reason + "', editor = '" + tmpData.user + "', latest_sample = '" + tmpData.sampDate + "', edit_date = CURRENT_DATE, prior_edits = CASE WHEN prior_edits = '' THEN CONCAT(samp_year, ' = ', ebtjv_code) ELSE CONCAT(prior_edits, ', ', samp_year, ' = ', ebtjv_code) END WHERE featureid = '" + tmpData.feat + "';");
 
+      var tmpQueries = [];
+      tmpData.forEach(function(tmpDatas) {
+        if(typeof(tmpDatas.reason) == "undefined") { tmpDatas.reason = ""; }
+        tmpQueries.push("UPDATE gis.ebtjv_catchments_current SET prior_code = ebtjv_code, prior_year = samp_year, ebtjv_code = '" + tmpDatas.code + "', samp_year = " + tmpDatas.sampYear + ", reason = '" + tmpDatas.reason + "', editor = '" + tmpDatas.user + "', latest_sample = '" + tmpDatas.sampDate + "', edit_date = CURRENT_DATE, prior_edits = CASE WHEN prior_edits = '' THEN CONCAT(samp_year, ' = ', ebtjv_code) ELSE CONCAT(prior_edits, ', ', samp_year, ' = ', ebtjv_code) END WHERE featureid = '" + tmpDatas.feat + "';");
+      })
+     
       const pool = new Pool({
         user: "Jason",
         host: "ecosheds.org",
@@ -451,25 +506,28 @@ io.on("connection", function(socket) {
         queue.push(pool.query.bind(pool, query));
       });
 
-      async.parallel(queue, function(err, results) {
+      recCnt = 0;
+
+      async.series(queue, function(err, results) {
         for(var i in results) {
           if(results[i].rowCount > 0) {
-            if(tmpData.extend == "yes") {
-              extendFetch(tmpData);
+            if(tmpData[i].extend == "yes") {
+              extendFetch(tmpData[i], i, pool);
             }
             else {
-              if(tmpData.curLine == tmpData.totLines) {
-                if(tmpData.totLines == 0) {
+              if(parseInt(i) == tmpData[i].totLines) {
+                if(tmpData[i].totLines == 0) {
                   var tmpMsg = "Successfully updated target catchment";
                 }
                 else {
-                  var tmpMsg = "Succussfully updated " + (tmpData.totLines + 1) + " catchments in the import file";
+                  var tmpMsg = "Succussfully updated " + (tmpData[i].totLines + 1) + " catchments in the import file";
                 }
 
-                socket.emit("edit", {"code": 200, "msg": tmpMsg});
+                socket.emit("updateProg", {"percent": Math.round(((parseInt(i) + 1)/(parseInt(tmpData[i].totLines) + 1))*100)});
+                setTimeout(function() { socket.emit("edit", {"code": 200, "msg": tmpMsg}); }, 1000);
               }
               else {
-                socket.emit("updateProg", {"percent": Math.round(((parseInt(tmpData.curLine) + 1)/(parseInt(tmpData.totLines) + 1))*100)});
+                socket.emit("updateProg", {"percent": Math.round(((parseInt(i) + 1)/(parseInt(tmpData[i].totLines) + 1))*100)});
               }
             }
           }
@@ -491,10 +549,17 @@ io.on("connection", function(socket) {
 
 
 
-  function addPoints(tmpData) {
+  function addPoints(tmpData, pool) {
     console.log("Adding coordinate points to tmppoints table");
     var strPoints = "";
+    var tmpBi = 0;
     tmpData.coords.forEach(function(tmpCoords) {
+      //***Check for missing coordinates
+      if(tmpCoords.long == "" || isNaN(tmpCoords.long) || tmpCoords.lat == "" || isNaN(tmpCoords.lat)) {
+        tmpBi = 1;
+        return;
+      }
+      
       if(strPoints == "") {
         strPoints = "('" + tmpData.user + "', ST_SetSRID(ST_Point(" + tmpCoords.long + "," + tmpCoords.lat + "), 4326))";
       }
@@ -502,11 +567,16 @@ io.on("connection", function(socket) {
         strPoints += ", ('" + tmpData.user + "', ST_SetSRID(ST_Point(" + tmpCoords.long + "," + tmpCoords.lat + "), 4326))";
       }
     });
+
+    if(tmpBi == 1) {
+      socket.emit("sendError", {"code": 401, "msg": "Encountered missing or non-numeric coordinates for at least 1 record, please edit or remove incorrectly formatted records."});
+      return;
+    }
     
 
     var tmpQueries = [];
     tmpQueries.push("INSERT INTO gis.tmppoints (user_name, geom) VALUES " + strPoints + ";");
-
+/*
     const pool = new Pool({
       user: "Jason",
       host: "ecosheds.org",
@@ -514,7 +584,7 @@ io.on("connection", function(socket) {
       password: "Jason20!",
       port: 5432,
     });
-
+*/
     var queue = [];
     tmpQueries.forEach(function(query,i) {
       queue.push(pool.query.bind(pool, query));
@@ -523,7 +593,7 @@ io.on("connection", function(socket) {
     async.parallel(queue, function(err, results) {
       if(err == null) {
         console.log("Added " + results[0].rowCount + " points for user " + tmpData.user);
-        findFeats(tmpData);
+        findFeats(tmpData, pool);
       }
       else {
         socket.emit("sendError", {"code": 401, "msg": "There were no points to get feature id for"});
@@ -534,11 +604,11 @@ io.on("connection", function(socket) {
 
 
 
-  function findFeats(tmpData) {
+  function findFeats(tmpData, pool) {
     console.log("Finding feature ids for points in tmppoint table");
     var tmpQueries = [];
     tmpQueries.push("SELECT a.featureid, ST_AsGeoJSON(b.geom) as point FROM gis.ebtjv_catchments_current a, gis.tmppoints b WHERE ST_Contains(a.wkb_geometry, b.geom) AND b.user_name = '" + tmpData.user + "';");
-
+/*
     const pool = new Pool({
       user: "Jason",
       host: "ecosheds.org",
@@ -546,7 +616,7 @@ io.on("connection", function(socket) {
       password: "Jason20!",
       port: 5432,
     });
-
+*/
     var queue = [];
     tmpQueries.forEach(function(query,i) {
       queue.push(pool.query.bind(pool, query));
@@ -566,11 +636,11 @@ io.on("connection", function(socket) {
 
 
 
-  function extendFetch(tmpData) {
+  function extendFetch(tmpData, iVal, pool) {
     console.log("Getting catchment count and sample OID");
     var tmpQueries = [];
     tmpQueries.push("SELECT featureid, ebtjv_code, catch_cnt, samp_year, samp_oid, state, editor, prior_code, reason, edit_date, latest_sample, prior_year, prior_edits FROM gis.ebtjv_catchments_current WHERE featureid = '" + tmpData.feat + "';");
-
+/*
     const pool = new Pool({
       user: "Jason",
       host: "ecosheds.org",
@@ -578,19 +648,26 @@ io.on("connection", function(socket) {
       password: "Jason20!",
       port: 5432,
     });
-
+*/
     var queue = [];
     tmpQueries.forEach(function(query,i) {
       queue.push(pool.query.bind(pool, query));
     });
 
     async.parallel(queue, function(err, results) {
+      //console.log(results);
       for(var i in results) {
-        if(results[i].rowCount > 0) {
-          extendEdit({"newData": results[i].rows[0], "oldData": tmpData});
+        if(typeof(results[i]) == 'undefined') {
+          console.log("Query recursion error!");
+          console.log(results);
+          console.log(tmpData.feat);
+          console.log(tmpQueries[0]);  
+        }
+        else if(results[i].rowCount > 0) {
+          extendEdit({"newData": results[i].rows[0], "oldData": tmpData}, iVal, pool);
         }
         else {
-          socket.emit("sendError", {"code": 401, "msg": "There was an error querying for catch_cnt and samp_oid"});
+          socket.emit("sendError", {"code": 401, "msg": "There was an error querying for catch_cnt and samp_oid for featureid " + tmpData.feat});
         }  
       }
     });    
@@ -598,9 +675,34 @@ io.on("connection", function(socket) {
 
 
 
-  function extendEdit(tmpData) {
+  function extendEdit(tmpData, iVal, pool) {
     console.log("Updating upstream catchments");
-  
+
+    //***return if catchment wasn't classified by original 2012 EBTJV algorithm
+    if(tmpData.newData.samp_oid == -1) {
+      recCnt +=1
+      //if(tmpData.oldData.curLine == tmpData.oldData.totLines) {
+      if(recCnt == tmpData.oldData.totLines + 1) {
+        if(tmpData.oldData.totLines == 0) {
+          var tmpMsg = "Successfully updated target catchment but couldn't move upstream as catchment was not previously classified (Catchment Count = 0 and Sample OID = -1)";
+        }
+        else {
+          var tmpMsg = "Succussfully updated " + (tmpData.oldData.totLines + 1) + " catchments in the import file and their associated upstream catchments";
+        }
+
+        socket.emit("updateProg", {"percent": Math.round(((recCnt)/(parseInt(tmpData.oldData.totLines) + 1))*100)});
+        //socket.emit("edit", {"code": 200, "msg": tmpMsg});
+        setTimeout(function() { socket.emit("edit", {"code": 200, "msg": tmpMsg}); }, 1000);
+      }
+      else {
+        socket.emit("updateProg", {"percent": Math.round(((recCnt)/(parseInt(tmpData.oldData.totLines) + 1))*100)});
+      }
+      //console.log("-1 catchment");
+      return;
+    }
+
+    //console.log("made it past");
+
     //***Convert dates
     var newDate = new Date(tmpData.newData.edit_date);
     var strDate = newDate.getFullYear() + "/" + (newDate.getMonth() + 1) + "/" + newDate.getDate();
@@ -612,7 +714,7 @@ io.on("connection", function(socket) {
 
     var tmpQueries = [];
     tmpQueries.push("UPDATE gis.ebtjv_catchments_current SET prior_code = ebtjv_code, prior_year = samp_year, ebtjv_code = '" + tmpData.newData.ebtjv_code + "', samp_year = " + tmpData.newData.samp_year + ", reason = '" + tmpData.newData.reason + "', editor = '" + tmpData.newData.editor + "', latest_sample = '" + tmpData.newData.latest_sample + "', edit_date = '" + tmpData.newData.edit_date + "', prior_edits = CASE WHEN prior_edits = '' THEN CONCAT(samp_year, ' = ', ebtjv_code) ELSE CONCAT(prior_edits, ', ', samp_year, ' = ', ebtjv_code) END WHERE state = '" + tmpData.newData.state + "' AND samp_oid = '" + tmpData.newData.samp_oid + "' AND catch_cnt > " + tmpData.newData.catch_cnt + ";");
-
+/*
     const pool = new Pool({
       user: "Jason",
       host: "ecosheds.org",
@@ -620,15 +722,18 @@ io.on("connection", function(socket) {
       password: "Jason20!",
       port: 5432,
     });
-
+*/
     var queue = [];
     tmpQueries.forEach(function(query,i) {
       queue.push(pool.query.bind(pool, query));
     });
 
     async.parallel(queue, function(err, results) {
+      recCnt +=1
+      //console.log("Rec: " + recCnt + ", i: " + iVal);
       for(var i in results) {
-        if(tmpData.oldData.curLine == tmpData.oldData.totLines) {
+        //if(tmpData.oldData.curLine == tmpData.oldData.totLines) {
+        if(recCnt == tmpData.oldData.totLines + 1) {
           if(tmpData.oldData.totLines == 0) {
             if(results[i].rowCount == 1) {
               var tmpMsg = "Successfully updated target catchment and " + results[i].rowCount + " upstream catchment";
@@ -640,15 +745,16 @@ io.on("connection", function(socket) {
           else {
             var tmpMsg = "Succussfully updated " + (tmpData.oldData.totLines + 1) + " catchments in the import file and their associated upstream catchments";
           }
-
-          socket.emit("edit", {"code": 200, "msg": tmpMsg});
+          socket.emit("updateProg", {"percent": Math.round(((recCnt)/(parseInt(tmpData.oldData.totLines) + 1))*100)});
+          //socket.emit("edit", {"code": 200, "msg": tmpMsg});
+          setTimeout(function() { socket.emit("edit", {"code": 200, "msg": tmpMsg}); }, 1000);
+        }
+        else {
+          socket.emit("updateProg", {"percent": Math.round(((recCnt)/(parseInt(tmpData.oldData.totLines) + 1))*100)});
         }
       }
     });    
   }
-
-
-
 });
 
 

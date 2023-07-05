@@ -111,6 +111,21 @@ html, body {
   margin-right: 5px;
 }
 
+#blurBackground {
+  backdrop-filter: blur(5px);
+  background: rgba(0,0,0,0.2);
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 401;
+}
+
+#launchIntro {
+  display: none;
+}
+
 .header .brand {
   font-variant: small-caps;
   font-size: 20pt;
@@ -329,6 +344,7 @@ a {
   top: 5px;
   //font-size: 1.8em;
   margin-right: 10px;
+  display: none;
 }
 
 #printControl:hover {
@@ -434,6 +450,10 @@ a {
   overflow: hidden;
 }
 
+#sheetSelTR {
+  display: none;
+}
+
 .filterAttrList.inputText {
   cursor: text;
 }
@@ -492,24 +512,28 @@ a {
 
 #confirmDiv {
   top: calc(100% - 438px);
-  left: calc(100% - 547px);
+  left: calc(100% - 620px);
 }
 
-#confirmTable, #confirmTable th, #confirmTable td {
+#confirmTable, #confirmTable th, #confirmTable td, #recEditTableYear, #recEditTableYear th, #recEditTableYear td {
   border: 1px solid #333333;
   padding: 2px 5px;
 }
 
-#confirmTable {
+#confirmTable, #recEditTableYear {
   width: 100%;
   border-collapse: collapse;
 }
 
-#confirmTable thead {
+#recEditTableYear {
+  display: none;
+}
+
+#confirmTable thead, #recEditTableYear thead {
   display: block;
 }
 
-#confirmTable tbody {
+#confirmTable tbody, #recEditTableYear tbody {
   overflow-y: auto;
   max-height: 271px;
   font-size: 15px;
@@ -517,11 +541,11 @@ a {
   display: block;
 }
 
-#confirmTable tbody tr {
+#confirmTable tbody tr, #recEditTableYear tbody tr {
   background: white;
 }
 
-#confirmTable tbody tr:hover {
+#confirmTable tbody tr:hover, #recEditTableYear tbody tr:hover {
   background: cyan;
 }
 
@@ -537,12 +561,30 @@ a {
   background: greenyellow;
 }
 
+#confirmTable .newCodeInput {
+  width: 50px;
+  text-align: center;
+}
+
+#confirmTable .newCodeInput.override {
+  background: red;
+  color: white;
+}
 
 #confirmTable td:nth-child(1) {
   color: dodgerblue;
   text-decoration: underline;
   cursor: pointer;
 }
+
+#recEditTableYear td:nth-child(1), #recEditTableYear th:nth-child(1) {
+  width: 180px;
+}
+
+#recEditTableYear td:nth-child(2), #recEditTableYear th:nth-child(2) {
+  width: 80px;
+}
+
 
 #confirmTable td:nth-child(1), #confirmTable th:nth-child(1) {
   width: 89px;
@@ -553,7 +595,7 @@ a {
 }
 
 #confirmTable td:nth-child(3), #confirmTable th:nth-child(3) {
-  width: 88px;
+  width: 105px;
 }
 
 #confirmTable td:nth-child(4), #confirmTable th:nth-child(4) {
@@ -561,10 +603,14 @@ a {
 }
 
 #confirmTable td:nth-child(5), #confirmTable th:nth-child(5) {
-  width: 43px;
+  width: 66px;
 }
 
 #confirmTable td:nth-child(6), #confirmTable th:nth-child(6) {
+  width: 43px;
+}
+
+#confirmTable td:nth-child(7), #confirmTable th:nth-child(7) {
   width: 86px;
 }
 
@@ -594,6 +640,19 @@ a {
 }
 
 #confirmTable .fa-check-square:hover, #confirmTable .fa-times-circle:hover, #confirmTable .fa-exclamation-triangle:hover {
+  opacity: 1;
+}
+
+#confirmTable .fa-comment {
+  color: red;
+  font-size: 18px;
+}
+
+#confirmTable .fa-comment-o {
+  font-size: 18px;
+}
+
+#confirmTable .fa-comment:hover, #confirmTable .fa-comment-o:hover {
   opacity: 1;
 }
 
@@ -688,6 +747,12 @@ a {
   float: right;
   margin-right: 5px;
 }
+
+#recentsDiv {
+  top: 85px;
+  left: 10px;
+}
+
 
 #locateDiv {
   top: 85px;
@@ -1026,7 +1091,7 @@ a {
 
 #aboutDiv {
   width: 50%;
-  height: 80%;
+  height: 95%;
   background: rgba(255,255,255,1);
   border: 1px solid black;
   border-radius: 4px;
@@ -1053,6 +1118,10 @@ a {
   text-align: left;
   font-size: 16px;
   margin: 5px;
+}
+
+.aboutImgDiv {
+  text-align: center;
 }
 
 .helpHeader {
@@ -1257,7 +1326,7 @@ a {
   color: #333333;
   display: block;
   overflow-y: auto;
-  max-height: 271px;
+  max-height: 360px;
   font-size: 15px;
 }
 

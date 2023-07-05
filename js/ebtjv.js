@@ -8,7 +8,7 @@ function initPage() {
   //******Call function to reposition windows on resize
   window.addEventListener('resize', resizePanels);
 
-
+  tmpLoad = true;
 
   map = new L.Map('map', {attributionControl: false, zoomControl: false, minZoom: 5, maxZoom: 19, inertiaDeceleration: 1000, worldCopyJump: true, maxBounds: [[75,-176],[0,-35]]});
   map.fitBounds([[35,-85],[47,-67]]);
@@ -92,23 +92,45 @@ function initPage() {
     .attr("class", "hcPanelDivs layerList")
     .html('<p id="loginNameP"></p><span id="loginIcon" class="secure fa fa-lock" title="Click to login or register"></span>');
 
-  d3.select("#secureDiv").select("span")
+  d3.select("#loginIcon")
     .on("click", function() {
       var tmpSpan = d3.select(this);
+      //console.trace();
       if(tmpSpan.classed("fa-lock") == true) {
         $('#loginModal').modal('show')
       }
       else {
-        tmpSpan.classed("fa-unlock", false);
-        tmpSpan.classed("fa-lock", true);
-        tmpSpan.property("title", "Click to log in or register");
-        d3.select("#loginNameP").text("");
-        accessToken = "";
-        curUser = "";
-        adStates = "";
+        
+        var logOut = confirm("Do you want to log out?");
+        if(logOut == true) {
+          tmpSpan.classed("fa-unlock", false);
+          tmpSpan.classed("fa-lock", true);
+          tmpSpan.property("title", "Click to log in or register");
+          d3.select("#loginNameP").text("");
+          d3.select("#userLog").property("value", "")
+          d3.select("#passwordLog").property("value", "")
+          accessToken = "";
+          curUser = "";
+          adStates = "";
+          d3.select("#launchIntro").style("pointer-events", "none");
+          d3.select("#blurBackground").style("display", "block");
+          d3.selectAll("#legendDiv,#infoDiv,#locateDiv,#updateDiv,#downloadDiv,#catchDiv,#confirmDiv").each(function() {
+            if(d3.select(this).style("opacity") == 1) {
+              toolWindowToggle(this.id.replace("Div",""));
+            }
+          });
+          d3.selectAll("#baselayerListDropdown,#overlayListDropdown").style("display", "none");
+
+          $("#loginIcon").click();
+        }
       }
     });
 
+
+  //******Add blur layer prior to login
+  d3.select("body")
+    .append("div")
+    .attr("id", "blurBackground");
 
 
   //******Add modal login box
@@ -122,7 +144,7 @@ function initPage() {
       + '<span id="loginClose" class="fa fa-times-circle" data-dismiss="modal" title="Cancel login"></span>'
       + '<div id="loginDiv">'
         + '<form action="javascript:;" onsubmit="login(this)">'
-          + '<input type="text" class="registerInput" name="email_log" placeholder="email" title="Email address" value="" required></input>'
+          + '<input id="userLog" type="text" class="registerInput" name="email_log" placeholder="email" title="Email address" value="" required></input>'
           + '<input id="passwordLog" type="password" class="registerInput pw_input" name="password_log" placeholder="password" title="Password" value="" required></input><span class="pw fa fa-eye" id="togglePWLog" title="Click to show password"></span>'
           + '<p id="loginErr"></p>'
           + '<button type="submit" id="loginBut" class="btn btn-primary" title="Click to login"><span class="fa fa-sign-in"></span>Login</button>'
@@ -447,16 +469,25 @@ function initPage() {
     maxZoom: 22
   });
 
+  var barriers = L.tileLayer.wms('https://ecosheds.org/geoserver/wms', {
+    layers: 'ebtjv_updater:ebjtv_barriers_09_23_15_states_sj',
+    format: 'image/png',
+    transparent: true,
+    tiled: true,
+    version: '1.3.0',
+    maxZoom: 22
+  });
 
 
-  var opaVar = [boundary, states, counties, huc6, huc8, huc10, huc12, patches_bkt, patches_wild, catchments, streams];
-  infoObj = {"ebtjv_boundary": "EBTJV Boundary", "ebtjv_states": "States", "ebtjv_counties": "Counties", "ebtjv_huc6": "HUC-6", "ebtjv_huc8": "HUC-8", "ebtjv_huc10": "HUC-10", "ebtjv_huc12": "HUC-12", "ebtjv_patches_bkt_09_22_16": "Brook Trout Patches", "ebtjv_patches_wild_trout_09_22_16": "Wild Trout Patches", "ebtjv_catchments_current": "Catchments", "ebtjv_streams": "NHDPlus v2 Streams"};
-  infoIDField = {"ebtjv_boundary": "name", "ebtjv_states": "state", "ebtjv_counties": "county", "ebtjv_huc6": "hu_6_name", "ebtjv_huc8": "hu_8_name", "ebtjv_huc10": "hu_10_name", "ebtjv_huc12": "hu_12_name", "ebtjv_patches_bkt_09_22_16": "feat_id", "ebtjv_patches_wild_trout_09_22_16": "feat_id", "ebtjv_catchments_current": "featureid", "ebtjv_streams": "gnis_name"};
-  infoDataType = {"ebtjv_boundary": "polygon", "ebtjv_states": "polygon", "ebtjv_counties": "polygon", "ebtjv_huc6": "polygon", "ebtjv_huc8": "polygon", "ebtjv_huc10": "polygon", "ebtjv_huc12": "polygon", "ebtjv_patches_bkt_09_22_16": "polygon", "ebtjv_patches_wild_trout_09_22_16": "polygon", "ebtjv_catchments_current": "polygon", "ebtjv_streams": "line"};
+
+  var opaVar = [boundary, states, counties, huc6, huc8, huc10, huc12, patches_bkt, patches_wild, catchments, streams, barriers];
+  infoObj = {"ebtjv_boundary": "EBTJV Boundary", "ebtjv_states": "States", "ebtjv_counties": "Counties", "ebtjv_huc6": "HUC-6", "ebtjv_huc8": "HUC-8", "ebtjv_huc10": "HUC-10", "ebtjv_huc12": "HUC-12", "ebtjv_patches_bkt_09_22_16": "Brook Trout Patches", "ebtjv_patches_wild_trout_09_22_16": "Wild Trout Patches", "ebtjv_catchments_current": "Catchments", "ebtjv_streams": "NHDPlus v2 Streams", "ebjtv_barriers_09_23_15_states_sj": "Stream Barriers"};
+  infoIDField = {"ebtjv_boundary": "name", "ebtjv_states": "state", "ebtjv_counties": "county", "ebtjv_huc6": "hu_6_name", "ebtjv_huc8": "hu_8_name", "ebtjv_huc10": "hu_10_name", "ebtjv_huc12": "hu_12_name", "ebtjv_patches_bkt_09_22_16": "feat_id", "ebtjv_patches_wild_trout_09_22_16": "feat_id", "ebtjv_catchments_current": "featureid", "ebtjv_streams": "gnis_name", "ebjtv_barriers_09_23_15_states_sj": "dam_name"};
+  infoDataType = {"ebtjv_boundary": "polygon", "ebtjv_states": "polygon", "ebtjv_counties": "polygon", "ebtjv_huc6": "polygon", "ebtjv_huc8": "polygon", "ebtjv_huc10": "polygon", "ebtjv_huc12": "polygon", "ebtjv_patches_bkt_09_22_16": "polygon", "ebtjv_patches_wild_trout_09_22_16": "polygon", "ebtjv_catchments_current": "polygon", "ebtjv_streams": "line", "ebjtv_barriers_09_23_15_states_sj": "point"};
   queryIDField = {"ebtjv_boundary": "id", "ebtjv_states": "fips", "ebtjv_counties": "counties_", "ebtjv_huc6": "objectid", "ebtjv_huc8": "objectid", "ebtjv_huc10": "objectid", "ebtjv_huc12": "objectid", "ebtjv_patches_bkt_09_22_16": "feat_id", "ebtjv_patches_wild_trout_09_22_16": "feat_id", "ebtjv_catchments_current": "featureid"};
   var overlayID = d3.keys(infoObj);
   var baselayers = {"Google Terrain": googleTerrain, "Google Hybrid": googleHybrid, "Google Satellite": googleSatellite, "Google Street": googleStreet, "Bing Hybrid": bingHybrid, "Bing Satellite": bingSatellite, "Bing Street": bingStreet, "USGS Topo": usgsTopo, "None": blank};
-  var overlays = {"EBTJV Boundary": boundary, "States": states, "Counties": counties, "HUC-6": huc6, "HUC-8": huc8, "HUC-10": huc10, "HUC-12": huc12, "Brook Trout Patches": patches_bkt, "Wild Trout Patches": patches_wild, "Catchments": catchments, "NHDPlus v2 Streams": streams};
+  var overlays = {"EBTJV Boundary": boundary, "States": states, "Counties": counties, "HUC-6": huc6, "HUC-8": huc8, "HUC-10": huc10, "HUC-12": huc12, "Brook Trout Patches": patches_bkt, "Wild Trout Patches": patches_wild, "Catchments": catchments, "NHDPlus v2 Streams": streams, "Stream Barriers": barriers};
   var overlayTitles = d3.keys(overlays);
 
   //******Make layer controller
@@ -590,9 +621,9 @@ function initPage() {
     .append("div")
     .attr("id", "panelTools");
 
-  var hcPanels = ["legend" ,"info", "update", "locate", "extent"];
-  var hcGlyphs = ["fa-th-list", "fa-info", "fa-pencil-square", "fa-search", "fa-globe"];
-  var hcLabel = ["Legend", "Identify", "Update", "Locate", "Zoom"]
+  var hcPanels = ["legend" ,"info", "update", "recents", "locate", "extent"];
+  var hcGlyphs = ["fa-th-list", "fa-info", "fa-pencil-square", "fa-table", "fa-search", "fa-globe"];
+  var hcLabel = ["Legend", "Identify", "Update", "Recent Edits", "Locate", "Zoom"]
   d3.select("#panelTools").selectAll("divs")
     .data(hcPanels)
     .enter()
@@ -621,7 +652,7 @@ function initPage() {
 
 
   //******Function to toggle tool windows
-  var toggleWords = {"legend":"Legend", "info":"Identify", "locate": "Locate", "update": "Update", "download": "Download", "catch": "Catchment Info", "confirm": "Confirm"}
+  var toggleWords = {"legend":"Legend", "info":"Identify", "locate": "Locate", "update": "Update", "download": "Download", "catch": "Catchment Info", "confirm": "Confirm", "recents": "Recent Edits"}
   toolWindowToggle = function (tmpDiv) {
     if (d3.select("#" + tmpDiv + "Div").style("opacity") == "1") {
       d3.select("#" + tmpDiv + "Div").transition().style("opacity", "0").style("visibility", "hidden");
@@ -721,7 +752,7 @@ function initPage() {
     .html(''
       + '<div id="methodSelDiv">'
         + '<label>Update Method</label>'
-        + '<select id="methodSel" class="filterAttrList" title="Click to select a method of updating the catchments"></select><span id="featSelReset" class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Update Method</b></u></p><p>Catchments can be updated using one of the following methods:<ul><li><b><u>Manual Edit</u></b> - Select and edit a single catchment by hand</li><li><b><u>Import File</u></b> - Import a CSV file containing catchment ids or sample point coordinates with associated EBTJV code or species data</li></ul></p>"></span>'
+        + '<select id="methodSel" class="filterAttrList" title="Click to select a method of updating the catchments"></select><span id="featSelReset" class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Update Method</b></u></p><p>Catchments can be updated using one of the following methods:<ul><li><b><u>Manual Edit</u></b> - Select and edit a single catchment by hand</li><li><b><u>Import File</u></b> - Import a data file (Execl or CSV) containing catchment IDs or sample point coordinates with associated EBTJV code or species data</li></ul></p>"></span>'
       + '</div>'
       + '<hr id="updateHR">'
       //***Manual Entry
@@ -736,7 +767,7 @@ function initPage() {
             + '</tr>'
             + '<tr>'
             + '<td><label>Updated Code: </label></td>'
-            + '<td><select id="manualCode" class="filterAttrList minWidth" name="manualCode" title="Select the EBTJV code to which to update" required></select><span class="fa fa-info-circle"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>EBTJV Catchment Codes</b></u></p><p><ul><li><u><b>0</b></u>: No salmonids present</li><li><u><b>0.2</b></u>: Brown Trout</li><li><u><b>0.3</b></u>: Rainbow Trout</li><li><u><b>0.4</b></u>: Rainbow & Brown Trout</li><li><u><b>05</b></u>: Stocked Brook Trout</li><li><u><b>1.1</b></u>: Brook Trout</li><li><u><b>1.2</b></u>: Brook & Brown Trout</li><li><u><b>1.3</b></u>: Brook & Rainbow Trout</li><li><u><b>1.4</b></u>: Brook, Brown & Rainbow Trout</li></ul>*P added to end of code indicates predicted (>10 years since sampled)</p>"></span></td>'
+            + '<td><select id="manualCode" class="filterAttrList minWidth" name="manualCode" title="Select the EBTJV code to which to update" required></select><span class="fa fa-info-circle"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>EBTJV Catchment Codes</b></u></p><p><ul><li><u><b>-1</b></u>: Unknown</li><li><u><b>0</b></u>: No salmonids present</li><li><u><b>0.2</b></u>: Brown Trout</li><li><u><b>0.3</b></u>: Rainbow Trout</li><li><u><b>0.4</b></u>: Rainbow & Brown Trout</li><li><u><b>05</b></u>: Stocked Brook Trout</li><li><u><b>1.1</b></u>: Brook Trout</li><li><u><b>1.2</b></u>: Brook & Brown Trout</li><li><u><b>1.3</b></u>: Brook & Rainbow Trout</li><li><u><b>1.4</b></u>: Brook, Brown & Rainbow Trout</li></ul>*P added to end of code indicates predicted (>10 years since sampled)</p>"></span></td>'
             + '</tr>'
             + '<tr>'
             + '<td><label>Sample Date: </label></td>'
@@ -769,15 +800,18 @@ function initPage() {
 
       //***Import file
       + '<div id="codeDiv" class="updateMethodDiv">'
-        + '<h5>Import File<span class="fa fa-info-circle"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Import File</b></u></p><p>Steps to update catchments by importing a CSV file:<ol><li>Choose the your CSV file (see \'About\' for formatting details)</li><li>Upload the file be clicking the <span class=&quot;fa fa-upload&quot;></span> icon<li>Map the file column names to the appropriate fields</li><li>Click \'Update\' button</li></ol></p>"></span></h5>'
+        + '<h5>Import File<span class="fa fa-info-circle"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Import File</b></u></p><p>Steps to update catchments by importing a data file:<ol><li>Choose your data file (can be either Excel or CSV format, see \'About\' for formatting details, NOTE: CSV files <b>cannot</b> contain internal commas in the data)</li><li>If data file is Excel format with multiple worksheets, select the appropriate worksheet name</li><li>Choose the appropriate options for how the catchment location and classification information is stored in your data file, and choose whether to extend current updates to upstream catchments (see \'About\' section for details regarding how and when to use the extend option)</li><li>Map the data file column names to the appropriate fields</li><li>Click the \'Update\' button to initiate the update process</li></ol></p>"></span></h5>'
         + '<div id="codeFormDiv">'
           + '<form id="codeForm" action="javascript:;" onsubmit="importEdit(this)">'
             + '<table id="codeTable" class="updateTable">' 
-            + '<tr style="border-bottom: 1px solid;">'
+            + '<tr>' // style="border-bottom: 1px solid;">'
             + '<td colspan="3" style="padding-bottom:5px;"><input type="file" id="codeFile" class="inputText" name="codeFile" accept=".csv,.xlsx" title="Click to select a file" required></input></td>'
             //+ '<td style="text-align:center;"><span id="codeFileUpload" class="fa fa-upload" title="Click to upload the selected file"></span></td>'
             + '</tr>'
-            + '<tr class="radTR">'
+            + '<tr id="sheetSelTR">'
+            + '<td colspan="3" style="padding-bottom:5px;text-align:center;"><label style="margin-right:5px;">Worksheet:</label><select id="sheetSel" class="filterAttrList" name="xlSheet" title="Click to select the appropriate Excel worksheet"></select></td>'
+            + '</tr>'
+            + '<tr class="radTR" style="border-top: 1px solid;">'
             + '<td><label>Locate Catchment: </label></td>'
             + '<td><input type="radio" id="codeRadCoords" class="filterAttrList manualRadio" name="codeLocID" value="coordinates" title="Choose this option to identify catchments through sample location coordinates (decimal degrees)" checked><label class="manualRadioLabel" for="codeRadCoords" title="Choose this option to identify catchments through sample location coordinates (decimal degrees)">Coordinates</label></input></td>'
             + '<td><input type="radio" id="codeRadFeatID" class="filterAttrList manualRadio" name="codeLocID" value="featureid" title="Choose this option to identify catchments by their feature ID\'s"><label class="manualRadioLabel" for="codeRadFeatID" title="Choose this option to identify catchments by their feature ID\'s">Feature ID</label></input></td>'
@@ -1025,6 +1059,28 @@ function initPage() {
     });
 
 
+  //***Call when Excel worksheet is changed
+  d3.select("#sheetSel")
+    .on("change", function() {
+      var tmpVal = d3.select(this.options[this.selectedIndex]).attr("value");
+
+      if(tmpVal == "...") {
+        this.setCustomValidity("A worksheet must be selected");
+        fileImportReset();
+      }
+      else {
+        this.setCustomValidity("");
+
+        fileImport = XLSX.utils.sheet_to_csv(workbook.Sheets[tmpVal], {FS:"\t"});
+        fileImport = fileImport.replace(/,/g, ";");
+        fileImport = fileImport.replace(/\t/g, ",");
+
+        addFileHeaders(fileImport);
+      }
+    });
+
+
+
   //***Add file upload function (csv file)
   const ImportRead = new FileReader();
   fileImport = "";
@@ -1032,7 +1088,7 @@ function initPage() {
   //***Read import file
   ImportRead.onload = function(event) {
     fileImport = event.target.result;
-    console.log(fileImport);
+    //console.log(fileImport);
     const allLines = fileImport.split(/\r?\n/);
     var tmpFields = allLines[0].split(",");
     tmpFields.splice(0,0,"Select field...");
@@ -1072,20 +1128,39 @@ function initPage() {
       fileImport = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], {FS:"\t"});
       fileImport = fileImport.replace(/,/g, ";");
       fileImport = fileImport.replace(/\t/g, ","); 
+
+      addFileHeaders(fileImport);
     }
     else {
+      wsArray = ["..."];
       workbook.SheetNames.forEach(function(sheetName) {
-        fileImport = XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]);
+        wsArray.push(sheetName);
       });
+      
+      d3.select("#sheetSel").selectAll("option").remove();
+
+      d3.select("#sheetSel").selectAll("option")
+        .data(wsArray)
+        .enter()
+          .append("option")
+          .attr("value", function(d) { return d; })
+          .text(function(d) { return d; });
+
+      d3.select("#sheetSel").property("required", true);
+      document.getElementById("sheetSel").setCustomValidity("A worksheet must be selected");
+      d3.select("#sheetSelTR").style("display", "table-row");
+
+      fileImportReset();
     }
+  }
 
-
+  function addFileHeaders(fileImport) {
     const allLines = fileImport.split(/\r?\n/);
     var tmpFields = allLines[0].split(",");
     tmpFields.splice(0,0,"Select field...");
 
     //***Add file headers to map select boxes
-    d3.select("#codeForm").selectAll("select").each(function() {
+    d3.select("#codeForm").selectAll("select.filterAttrList.minwidth").each(function() {
       d3.select(this).selectAll("option").remove();
       d3.select(this).selectAll("option")
         .data(tmpFields)
@@ -1095,7 +1170,6 @@ function initPage() {
           .property("title", function(d) { return d; })
           .text(function(d) { return d; });
 
-          
     });
 
   }
@@ -1110,11 +1184,17 @@ function initPage() {
   //***Read in file and add field names to mapping selects
   d3.select("#codeFile")
     .on("change", function() {
-      if(document.getElementById("codeFile").files[0].name.toUpperCase().includes("CSV") == true) {
-        ImportRead.readAsText(document.getElementById("codeFile").files[0]);
+      d3.select("#sheetSelTR").style("display", "none");
+      if(this.files.length > 0) {
+        if(document.getElementById("codeFile").files[0].name.toUpperCase().includes("CSV") == true) {
+          ImportRead.readAsText(document.getElementById("codeFile").files[0]);
+        }
+        else if(document.getElementById("codeFile").files[0].name.toUpperCase().includes("XLSX") == true) {
+          ImportReadXL.readAsBinaryString(document.getElementById("codeFile").files[0]);
+        }
       }
-      else if(document.getElementById("codeFile").files[0].name.toUpperCase().includes("XLSX") == true) {
-        ImportReadXL.readAsBinaryString(document.getElementById("codeFile").files[0]);
+      else {
+        fileImportReset();
       }
     });
 
@@ -1140,7 +1220,8 @@ function initPage() {
   d3.select("body")
     .append("div")
     .attr("class", "legend gradDown")
-    .attr("id", "confirmDiv");
+    .attr("id", "confirmDiv")
+    .on("click", function() { getConfirmCSV(); });
 
   $('#confirmDiv').draggable({containment: "html", cancel: ".toggle-group,input,textarea,button,select,option"});
 
@@ -1150,7 +1231,7 @@ function initPage() {
     .attr("class", "legTitle")
     .attr("id", "confirmTitle")
     .append("span")
-    .html('<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Confirm Edits</b></u></p><p>Review proposed edits and uncheck any that you do not wish to make</p>"</span>');
+    .html('<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Confirm Edits</b></u></p><p>Review proposed edits and uncheck any that you do not wish to make. Records are sorted by Feature ID (ascending order) and Date (descending order).</p>"</span>');
  
   d3.select("#confirmTitle")
     .html(d3.select("#confirmTitle").html() + '<div class="exitDiv"><span id="hideConfirm" class="fa fa-times-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p>Click to hide window</p>"</span></div>'); 
@@ -1164,7 +1245,7 @@ function initPage() {
     .html('<table id="confirmTable">'
       + '<thead>'
         + '<tr>'
-          + '<th>Feature ID</th><th>Current Code</th><th>New Code</th><th>Date</th><th>Flag</th><th>Make Edit</th>'
+          + '<th title="Unique identifier of catchment taken from NHDPlus v2, click ID to zoom to catchment on the map">Feature ID</th><th title="The EBTJV catchment code currently in the database">Current Code</th><th title="The EBTJV catchment code derived from the import file">New Code<span class="fa fa-info-circle" style="margin-left:5px;"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>EBTJV Catchment Codes</b></u></p><p>Click on the code to override its value<br><ul><li><u><b>-1</b></u>: Unknown</li><li><u><b>0</b></u>: No salmonids present</li><li><u><b>0.2</b></u>: Brown Trout</li><li><u><b>0.3</b></u>: Rainbow Trout</li><li><u><b>0.4</b></u>: Rainbow & Brown Trout</li><li><u><b>05</b></u>: Stocked Brook Trout</li><li><u><b>1.1</b></u>: Brook Trout</li><li><u><b>1.2</b></u>: Brook & Brown Trout</li><li><u><b>1.3</b></u>: Brook & Rainbow Trout</li><li><u><b>1.4</b></u>: Brook, Brown & Rainbow Trout</li></ul>*P added to end of code indicates predicted (>10 years since sampled)</p>"></span></th><th title="Sample date obtained from the import file">Date</th><th title="Click to add a comment or reason for the update">Note<span class="fa fa-info-circle" style="margin-left:5px;"  data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Standardized Reasons</b></u></p><p><ul><li>Conflicting data</li><li>Known barrier</li><li>Biologist knowledge</li><li>Outdated data</li><li>Other</li></ul></p>"></span></th><th title="Presence of an icon symbol indicates multiple records for the same catchment">Flag</th><th title="Click the icon symbol to toggle inclusion of that record\'s update">Make Edit</th>'
         + '</tr>'
       + '</thead>'
       + '<tbody id="confirmTbody"></tbody>'
@@ -1195,6 +1276,8 @@ function initPage() {
     d3.select("#confirmBack").on("click", function() { toolWindowToggle("confirm"); toolWindowToggle("update"); });
 
     d3.select("#makeEditsBut").on("click", function() {
+      d3.select("#map").style("cursor", "progress");
+
       var lineCnt = -1;
       d3.select("#confirmTable").select("tbody").selectAll("tr").each(function(tr, i) {
         if(d3.select("#confirmSpan_" + i).classed("fa-check-square") == true) {
@@ -1204,17 +1287,27 @@ function initPage() {
 
       if(lineCnt >= 0) {
         d3.select("#progBarDiv").style("display", "block");
+        d3.select("#progBar")
+          .attr("aria-valuenow", 0)
+          .style("width", "0%")
+          .text("0%");
+
         var curLine = -1;
+        var dataArray = [];
         d3.select("#confirmTable").select("tbody").selectAll("tr").each(function(tr, i) {
           if(d3.select("#confirmSpan_" + i).classed("fa-check-square") == true) {
             var tmpData = JSON.parse(d3.select(this).attr("data-edit"));
             tmpData.totLines = lineCnt;
             curLine += 1;
             tmpData.curLine = curLine;
-            console.log(tmpData);
-            socket.emit("edit", tmpData);
+            tmpData.method = "file";
+            //console.log(tmpData);
+            dataArray.push(tmpData);
+            //socket.emit("edit", tmpData);
           }
         });
+
+        socket.emit("edit", dataArray);
       }
       else {
         alert("There are no records selected to be updated.");
@@ -1423,7 +1516,7 @@ function initPage() {
       var tmpRect = document.getElementById(tmpName + "LegendImg").getBoundingClientRect();
       d3.select("#" + tmpName + "LegImgDiv").style({"max-height":tmpRect.height - 67 + "px", "max-width": tmpRect.width + "px"});
       d3.select("#" + tmpName + "Legend").style("opacity", "1");     
-    }).attr("src", "https://ecosheds.org/geoserver/wms?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=30&HEIGHT=30&LAYER=ebtjv_updater:" + tmpName);
+    }).attr("src", "https://ecosheds.org/geoserver/wms?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&SCALE=50000&WIDTH=30&HEIGHT=30&LAYER=ebtjv_updater:" + tmpName);
 
     d3.select("#" + tmpName + "collapseDiv")
       .append("div")
@@ -1437,7 +1530,7 @@ function initPage() {
     d3.select("#legendImgDiv")
       .style("display", "block");
 
-    if(d3.select("#legendDiv").style("opacity") == 0) {
+    if(d3.select("#legendDiv").style("opacity") == 0 && tmpLoad == false) {
       toolWindowToggle("legend");
     }
 
@@ -1474,6 +1567,60 @@ function initPage() {
 
 
 
+
+  //******Make div for recent edit results
+  d3.select("body")
+    .append("div")
+    .attr("class", "legend gradDown")
+    .attr("id", "recentsDiv");
+
+  $('#recentsDiv').draggable({containment: "html", cancel: ".toggle-group,input,textarea,button,select,option"});
+
+  d3.select("#recentsDiv")
+    .append("h4")
+    .text("Recent Edits")
+    .attr("class", "legTitle")
+    .attr("id", "recentsTitle")
+    .append("span")
+    .html('<span class="fa fa-info-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p><u><b>Recent Edits</b></u></p><p>Displays data for catchment update occurrences</p>"</span>');
+ 
+  d3.select("#recentsTitle")
+    .html(d3.select("#recentsTitle").html() + '<div class="exitDiv"><span id="hideRecents" class="fa fa-times-circle" data-toggle="tooltip" data-container="body" data-placement="auto" data-html="true" title="<p>Click to hide window</p>"</span></div>'); 
+
+  d3.select("#hideRecents")
+    .on("click", function() { toolWindowToggle("recents"); });
+
+  d3.select("#recentsDiv")
+    .append("div")
+    .attr("id", "recents")
+    .html('<div style="padding:5px;">'
+      + '<label>Edit Type:</label>'
+      + '<select id="recEditSel" class="filterAttrList">'
+        + '<option>...</option>'
+        + '<option value="state_year">Most recent state sample year</option>'
+        //+ '<option value="state_person">Recent catchment edits</option>'
+      + '</select>'
+      + '</div>'
+      + '<div><table id="recEditTableYear">'
+        + '<thead><tr><th>State</th><th>Year</th></tr></thead>'
+        + '<tbody id="recEditTableYearBody"></tbody>'
+      + '</table></div>'
+    );
+
+
+  d3.select("#recEditSel")
+    .on("change", function() { 
+      if(d3.select(this).property("selectedIndex") == 0) {
+        d3.select("#recents").selectAll("table").style("display", "none");
+      }
+      else if(d3.select(this).property("selectedIndex") == 1) {
+        socket.emit("get_latest_update");
+      }
+      else if(d3.select(this).property("selectedIndex") == 2) {
+        //socket.emit("get_latest_update");
+      }
+
+    });
 
 
 
@@ -1514,25 +1661,70 @@ function initPage() {
            + '<p>The EBTJV Catchment Updater is a data visualization and decision support tool that was developed to assist with updating of EBTJV catchment codes representing salmonid species presence.<br>This tool was designed to assist federal and state agencies, local decision-makers, regional planners, conservation organizations, and natural resource managers using open-source software.</p>'
            //+ '<p>Data for this tool comes from a variety of sources and was developed in partnership with other efforts, including <a href="http://www.umasscaps.org/" target="_blank">CAPS (Conservation Assessment and Prioritization System)</a> and the <a href="https://streamcontinuity.org/" target="_blank">North Atlantic Aquatic Connectivity Collaborative (NAACC)</a>. Thank you to all who provided data, expertise, and feedback for this tool.</p>'
            + '<br>'
-           + '<h3>Quick Start</h3>'
-           + '<p>Additional information about a tool or an item can be found by hovering over the <span class="fa fa-info-circle" title="A tooltip displaying additional details appears upon hovering over most elements."></span> icon or the object itself to display a tooltip.</p>'
-/*
-           + '<p><b>Step 1:</b> Open the Planting Locations window by clicking the <span class="fa fa-tree"></span> icon on the top menu.</p>'
-           + '<p><b>Step 2:</b> Select a layer to restrict the area of analysis.</p>'
-           + '<p><b>Step 3:</b> Select one or more features (e.g. huc or county) by clicking them on the map (selected features turn blue). To remove a selected feature click that feature again. To remove all selections double click any feature.</p>'
-           + '<p><b>Step 4:</b> Add one or more query criteria by selecting a layer and an operator, entering a value, and clicking on the "Add" button.<ul style="margin:0;"><li>NOTE: A layer can only be used to specify one criteria.</li></ul></p>'
-           + '<p><b>Step 5:</b> Once all criteria have been specified, click the "Run" button to perform the query and display the results.</p>'
-           + '<p><b>Step 6:</b> View, compare, and download the query results in the "Results" window that appears upon run completion.</p>'
-           + '<br>'
-           + '<h3>Analysis details</h3>'
+           + '<h3>Rule Set</h3>'
+           + '<p>The Updater is a continuation of the 2015 EBTJV catchment classification effort in that it uses the most recent classification data and fields produced by that algorithm.</p>' 
+           + '<p>2015 Assessment catchment classification algorithm</p>'
+           + '<div class="aboutImgDiv"><img src="images/catchment_algorithm_flowchart.jpg" style="width:calc(100% - 125px);"></img></div>'
+           + '<p>2015 Assessment catchment classification data fields</p>'
+           + '<div class="aboutImgDiv"><img src="images/catchment_data_fields.jpg" style="width:calc(100% - 125px);"></img></div>'
+           + '<p>Catchment classification consisted of determining which salmonid species were present, and how long ago the sample was conducted. All samples occurring greater than 10 years from the analysis year were given a \'P\' after the code representing \'predicted\'. Catchments upstream of a sample point were inferred from the downstream catchment, and given the classification code of that catchment, until a barrier, different sample, or stream end was encountered. The below table details the different classification codes (BKT = brook trout, BNT = brown trout, RBT = rainbow trout):</p>'
+           + '<div class="aboutImgDiv"><img src="images/ebtjv_codes.jpg" style="width:500px"></img></div>'
+           + '<p>Certain accomodations ended up being necessary due to the sometimes absence of smaller streams in the flowline layer, and the occurrence of multiple stream reaches in a single catchment.</p>'
+           + '<p>Examples of likely scenarios in which users may need to manually edit a catchment\'s classification are listed below, along with a supplied reason that should be used as justification in order to standardize data across the range.</p>'
            + '<ul>'
-           + '<li><p>Raster layers used for the analysis are composed of 30 m pixels which are restricted to having their centroid be within 100 feet of the NHD 1:24,000 stream layer.</p></li>'
-           + '<li><p>The <b>consecutive years pest damage</b> layer was computed using <a href="https://www.fs.fed.us/foresthealth/applied-sciences/mapping-reporting/detection-surveys.shtml" title="https://www.fs.fed.us/foresthealth/applied-sciences/mapping-reporting/detection-surveys.shtml" target="_blank">Forest Service Insect & Disease Detection Survey (IDS)</a> data from 2014 through 2019. A map algebra expression evaluated backwards in time whether a pixel was surveyed, and if so if it was classified as damaged. The first year where a pixel was surveyed and undamaged returned the number of previous years of consecutive damage.<ul><li>Unsurveyed pixels for 2019 were assumed to be damaged if the prior surveyed year was classified as damaged.</li><li>Pixels classified as damaged in 2019 with subsequent unsurveyed years were assumed to be damaged until an undamaged classification was encountered.</li></ul></p></li>' 
-           + '<li><p>The <b>solar gain</b> layer was computed using the <a href="https://grass.osgeo.org/grass78/manuals/r.sun.html" title="https://grass.osgeo.org/grass78/manuals/r.sun.html" target="_blank">r.sun</a> module within <a href="https://grass.osgeo.org/" title="https://grass.osgeo.org/" target="_blank">GRASS GIS 7.8.2</a>. For the r.sun module, in addition to elevation, both aspect and slope were used after being derived from the 30m National Elevation Dataset raster using <a href="https://desktop.arcgis.com/en/arcmap/" title="https://desktop.arcgis.com/en/arcmap/" target="_blank">ArcMap 10.7</a>. The irradiance/irradiation model was set to total (glob_rad), and the day of year was set to 180 (June 28th).</p></li>'
-           + '<li><p>When creating an analysis criteria using the solar gain layer, a percent value between 0 and 100 should be specified. This value is used by the analysis to determine the raw data value by performing the following steps:<ul><li>Acquiring all raw solar gain values within the 100 foot stream buffer that are contained by the selected area features.</li><li>Sorting the acquired raw values by ascending value and returning the value of the item in the list located at the specified percentage.</li></ul></p></li>'
-           + '<li><p>The raster layer produced by the analysis is a temporary file stored on the server that will be deleted once the user leaves the website. Since it is a temporary file, the naming convention used for tracking each result layer uses the name of the area selection layer (e.g HUC-12), and the time in seconds since midnight Eastern time (e.g. 9:00 AM = 32400).</p></li>'
+             + '<li>If a catchment includes a portion of the mainstem and tributary and two data points occur in the same catchment in the same year with conflicting results (e.g., Brown Trout in mainstem and Brook Trout in tributary), manually update to the catchment code that best describes the trout community and select "<b>Conflicting data</b>". In some cases, this may result in a sympatric patch code.</li>'
+             + '<li>If a biologist knows that a barrier is present which changes trout community upstream of the barrier but it is not reflected in the data, manually update catchment code to reflect their knowledge of the stream and in comments for manual edit, select "<b>Known barrier</b>".</li>'
+             + '<li>The most recent survey results (e.g., allopatric Brook Trout) conflicts with knowledge from prior surveys (e.g., sympatric Brook Trout and Rainbow Trout) and biologist knows Rainbow Trout are still in the stream but the sampling did not pick them up this year because they occur in low density, manually update to the code that best describes the trout community and select "<b>Biologist knowledge</b>".</li>'
+             + '<li>If data is outdated and includes an inaccurate entry for a trout species present, (e.g., only data available was from 1981 and includes a hatchery rainbow trout that was recorded as a wild Rainbow Trout and is changing the catchment to sympatric Brook Trout and Rainbow Trout, manually update to the code that best describes the trout community and select "<b>Outdated data</b>".</li>'
+             + '<li>If a situation occurs in which a manual edit is needed and does not fall within the categories outlined above, manually update to the code that best describes the trout community and select "<b>Other</b>" and provide brief rationale for why update was made.</li>'
            + '</ul>'
-*/
+
+           + '<h3>Quick Start</h3>'
+           + '<p>Throughout the Updater tool, additional information about a tool or an item can be found by hovering over the <span class="fa fa-info-circle" title="A tooltip displaying additional details appears upon hovering over most elements."></span> icon or the object itself to display a tooltip.</p>'
+           + '<p>Given the high number of classification scenarios possible from complex spatial and temporal datasets involved with this project, we recommend the following steps as a means to better control and track the update process:</p>'
+           + '<ol>'
+             + '<li>Only use sample data that has been collected since the last catchment update</li>'
+             + '<li>Parse the sample data into hydrologic units (e.g. HUC8 or HUC10) to avoid overwriting previous edits</li>'
+             + '<li>Import data using the file import method first, followed by manual edits to prevent overwriting updates.</li>'
+             + '<li>For file imports, download the \'Confirm Edits\' table as a CSV file to keep as a record of the updates.</li>'
+           + '</ol>'  
+
+           + '<h3>Data Format</h3>'
+           + '<p>When using the \'Import File\' method to make updates, the data can be saved as either an Excel or CSV file. Excel files with multiple worksheets will require the user to select the appropriate one. <span style="color:red;"><b>IMPORTANT</b>: CSV files cannot have internal commas in any field.</span></p>'
+           + '<p>Data should be formatted in rows, where a row represents a sampling event, and must contain information on:</p>'
+           + '<ul>'
+             + '<li><b>Sample location</b></li>'
+             + '<ul>'
+               + '<li>Coordinates (decimal degrees), or</li>'
+               + '<li>Catchment feature ID</li>'
+             + '</ul>'
+             + '<li><b>Salmonid species present</b></li>'
+             + '<ul>'
+               + '<li>EBTJV code, or</li>'
+               + '<li>Species occurrence data - A column for each species (BKT, BNT, RBT, stocked BKT (optional))</li>'
+                 + '<ul>'
+                   + '<li>Species occurrence data can be represented by an integer >= 1, or by the word \'true\'</li>'
+                 + '</ul>'
+             + '</ul>'
+             + '<li><b>Sample date</b></li>'
+               + '<ul>'
+                 + '<li>MM/DD/YYYY format</li>'
+               + '</ul>'
+           + '</ul>'
+
+           + '<p><u>Example data file formats</u>'
+           + '<ul>'
+             + '<li><a href="files/update_species_coordinates_tf.xlsx">Species occurrence (True/False) & Coordinates Excel file</a></li>'
+             + '<li><a href="files/update_species_featureid.csv">Species occurrence (counts) & Feature IDs CSV file</a></li>'
+             + '<li><a href="files/update_codes_coordinates_multiple.xlsx">EBTJV codes & Coordinates Excel file (multiple worksheets)</a></li>'
+             + '<li><a href="files/update_codes_featureid.csv">EBTJV codes & Feature IDs CSV file</a></li>'
+           + '</ul>'
+    
+           + '<h3>Additional Info</h3>'
+           + '<p><b>Extend Upstream</b>: This is an option in both the manual edit and import file update options that uses information from the 2015 catchment classification, specifically the \'Catchment Count\' and \'Sample OID\' fields, to update any upstream catchments (catchment counts greater than focal catchment) classified by the same sample data (sample OID).</p>'
+           + '<p>This option is only available to states classified using the 2015 algorithm (northern states), and should be used with caution as data overwriting is possible.</p>'
+
+
            + '<br>'
            + '<h3>Tool Development Team</h3>'
            + '<ul>'
@@ -1561,20 +1753,22 @@ function initPage() {
            //+ '<h3>Software Libraries</h3>'
            + '<p>The following open-source software libraries were used to create the EBTJV Catchment Updater:</p>'
            + '<ul>'
+             + '<li><p><b><a href="https://www.postgresql.org/" target="_blank">PostgreSQL</a>:</b> Relational database</p></li>'
+             + '<li><p><b><a href="https://postgis.net/" target="_blank">PostGIS</a>:</b> Spatial database extension for PostgreSQL</p></li>'
              + '<li><p><b><a href="https://nodejs.org/en/" target="_blank">Node.js</a>:</b> Web server runtime environment</p></li>'
              + '<li><p><b><a href="https://expressjs.com/" target="_blank">Express</a>:</b> Web server framework and API</p></li>'
              + '<li><p><b><a href="http://leafletjs.com/" target="_blank">Leaflet</a>:</b> Interactive map framework</p></li>'
-             + '<li><p><b><a href="https://github.com/topojson/topojson" target="_blank">Topojson.js</a>:</b> Geospatial data format</p></li>'
+             //+ '<li><p><b><a href="https://github.com/topojson/topojson" target="_blank">Topojson.js</a>:</b> Geospatial data format</p></li>'
              + '<li><p><b><a href="https://d3js.org/" target="_blank">D3.js</a>:</b> Data visualization, mapping and interaction</p></li>'
-             + '<li><p><b><a href="https://introjs.com/" target="_blank">Intro.js</a>:</b> Guide and feature introduction</p></li>'
              + '<li><p><b><a href="http://getbootstrap.com/" target="_blank">Bootstrap</a>:</b> Front-end framework and styling</p></li>'
              + '<li><p><b><a href="https://jquery.com/" target="_blank">jQuery.js</a>:</b> JavaScript library</p></li>'
+             + '<li><p><b><a href="https://introjs.com/" target="_blank">Intro.js</a>:</b> Guide and feature introduction</p></li>'
              //+ '<li><p><b><a href="https://github.com/d3/d3-queue" target="_blank">Queue.js</a>:</b> Asynchronous dataset and file retrieval</p></li>'
              //+ '<li><p><b><a href="http://colorbrewer2.org/" target="_blank">ColorBrewer</a>:</b> Pre-defined color palettes</p></li>'
            + '</ul>'
            + '<br>'
            + '<h3>Future Work and Contact Info</h3>'
-           + '<p>Development of this tool is currently ongoing and future updates may include additional area restriction polygons and criteria selection rasters. If you have any questions, encounter any errors, or are interested in applying this tool to your region, please contact Jason Coombs at <a href="mailto:jcoombs@umass.edu">jcoombs@umass.edu</a>.</p>'
+           + '<p>Development of this tool is currently ongoing. If you have any questions or encounter any errors, please contact Jason Coombs at <a href="mailto:jason_coombs@fws.gov">jason_coombs@fws.gov</a>.</p>'
            + '<br>'
            + '<h3>Tool Version</h3>'
            + '<p>v1.0.0 - 04-20-2022</p>'
@@ -1636,13 +1830,13 @@ function initPage() {
           + '<h4>Polygon Layers</h4>'
           + '<table>'
             + '<tr><th>Name</th><th>Source</th><th>Download</th></tr>'
-            //+ '<tr><td>National Forests</td><td><a href="https://data.fs.usda.gov/geodata/edw/datasets.php" target="_blank">Forest Service Geodata Clearinghouse</a></td><td><a href="layers/national_forests_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
-            + '<tr><td>Counties</td><td><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html" target="_blank">United States Census Bureau</a></td><td><a href="layers/counties_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
-            + '<tr><td>HUC-8</td><td><a href="https://datagateway.nrcs.usda.gov/GDGOrder.aspx" target="_blank">USDA Geospatial Data Gateway</a></td><td><a href="layers/huc_8_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
-            + '<tr><td>HUC-10</td><td><a href="https://datagateway.nrcs.usda.gov/GDGOrder.aspx" target="_blank">USDA Geospatial Data Gateway</a></td><td><a href="layers/huc_10_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
-            + '<tr><td>HUC-12</td><td><a href="https://datagateway.nrcs.usda.gov/GDGOrder.aspx" target="_blank">USDA Geospatial Data Gateway</a></td><td><a href="layers/huc_12_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
-            + '<tr><td>Streams NHD 1:24k</td><td><a href="http://prd-tnm.s3-website-us-west-2.amazonaws.com/?prefix=StagedProducts/Hydrography/NHD/State/HighResolution/GDB/" target="_blank">National Hydrography Dataset</a></td><td><a href="layers/nhd_streams_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
-            //+ '<tr><td>Lakes</td><td><a href="http://prd-tnm.s3-website-us-west-2.amazonaws.com/?prefix=StagedProducts/Hydrography/NHD/State/HighResolution/GDB/" target="_blank">National Hydrography Dataset</a></td><td><a href="layers/nhd_lakes_mi.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
+            + '<tr><td>States</td><td><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html" target="_blank">United States Census Bureau</a></td><td><a href="layers/ebtjv_states.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
+            + '<tr><td>Counties</td><td><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html" target="_blank">United States Census Bureau</a></td><td><a href="layers/ebtjv_counties.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
+            + '<tr><td>HUC-6</td><td><a href="https://datagateway.nrcs.usda.gov/GDGOrder.aspx" target="_blank">USDA Geospatial Data Gateway</a></td><td><a href="layers/ebtjv_huc_6.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
+            + '<tr><td>HUC-8</td><td><a href="https://datagateway.nrcs.usda.gov/GDGOrder.aspx" target="_blank">USDA Geospatial Data Gateway</a></td><td><a href="layers/ebtjv_huc_8.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
+            + '<tr><td>HUC-10</td><td><a href="https://datagateway.nrcs.usda.gov/GDGOrder.aspx" target="_blank">USDA Geospatial Data Gateway</a></td><td><a href="layers/ebtjv_huc_10.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
+            + '<tr><td>HUC-12</td><td><a href="https://datagateway.nrcs.usda.gov/GDGOrder.aspx" target="_blank">USDA Geospatial Data Gateway</a></td><td><a href="layers/ebtjv_huc_12.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
+            + '<tr><td>Streams</td><td><a href="https://www.epa.gov/waterdata/get-nhdplus-national-hydrography-dataset-plus-data" target="_blank">NHDPlus v2 Streams</a></td><td><a href="layers/ebtjv_nhdplusv2_streams.zip" target="_blank" title="Click to download"><span class="fa fa-download"></span></a></td></tr>'
           + '</table>'
         );
 /*
@@ -1729,7 +1923,7 @@ function initPage() {
     var tmpJ = Math.round(map.layerPointToContainerPoint(e.layerPoint).y);
 
     var tmpUrl = 'https://ecosheds.org/geoserver/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetFeatureInfo&LAYERS=' + tmpLayers + '&QUERY_LAYERS=' + tmpLayers + '&BBOX=' + tmpStr + '&FEATURE_COUNT=' + (i * 5) + '&HEIGHT=' + tmpHeight + '&WIDTH=' + tmpWidth + '&INFO_FORMAT=application/json&CRS=EPSG:4326&i=' + tmpI + '&j=' + tmpJ;
-    console.log(tmpUrl);
+    //console.log(tmpUrl);
 
     //var catchTitles = {"areasqkm": "Area (km^2)", "catch_cnt": "Catchment Count", "changed_from": "Changed From", "comment": "Comments", "cum_length": "Cumulative Length (km)", "dam": "Dam Present", "ebtjv_code": "EBTJV Code", "edit_date": "Date Edited", "editor": "Editor", "featureid": "Feature ID", "reason": "Reason", "samp_dist": "Sample Distance (m)", "samp_loc": "Sample Location", "samp_oid": "Sample OID", "samp_year": "Sample Year", "state": "State", "str_order": "Stream Order", "val_change": "Validation Change", "val_reason": "Validation Reason"};
     var catchInfo = {"featureid": "Feature ID", "ebtjv_code": "EBTJV Code", "samp_year": "Sample Year", "state": "State", "str_order": "Stream Order", "catch_cnt": "Catchment Count", "dam": "Dam Present", "samp_loc": "Sample Location", "samp_dist": "Sample Distance (m)", "areasqkm": "Area (km^2)", "cum_length": "Cumulative Length (km)", "samp_oid": "Sample OID", "comment": "Comments"};
@@ -1845,9 +2039,14 @@ function initPage() {
 
   $("#layerToggleDiv0").click();
 
-  if(localStorage.getItem('disableTut') != "true") {
-    startIntro();
-  }
+  //if(localStorage.getItem('disableTut') != "true") {
+  //  startIntro();
+  //}
+
+
+  //***Start with login displayed
+  $("#loginIcon").click();
+  tmpLoad = false;
 }
 
 function changePill(tmpID) {
@@ -1931,11 +2130,16 @@ function manualEdit(tmpForm) {
   var tmpExtend = tmpForm.manualExtend.value;
 
   //***Confirm user has admin priveleges for state where catchment is located
-  if(adStates.indexOf("All") == -1) {
-    socket.emit("check_admin", {"feat": tmpFeat, "code": tmpCode, "sampDate": tmpDate, "sampYear": tmpYear, "reason": tmpReason, "extend": tmpExtend, "user": curUser, "token": accessToken, "curLine": 0, "totLines": 0, "adStates": adStates});
+  if(adStates != null) {
+    if(adStates.indexOf("All") == -1) {
+      socket.emit("check_admin", {"feat": tmpFeat, "code": tmpCode, "sampDate": tmpDate, "sampYear": tmpYear, "reason": tmpReason, "extend": tmpExtend, "user": curUser, "token": accessToken, "curLine": 0, "totLines": 0, "adStates": adStates, "method": "manual"});
+    }
+    else {
+      socket.emit("edit", [{"feat": tmpFeat, "code": tmpCode, "sampDate": tmpDate, "sampYear": tmpYear, "reason": tmpReason, "extend": tmpExtend, "user": curUser, "token": accessToken, "curLine": 0, "totLines": 0, "adStates": adStates, "method": "manual"}]);
+    }
   }
   else {
-    socket.emit("edit", {"feat": tmpFeat, "code": tmpCode, "sampDate": tmpDate, "sampYear": tmpYear, "reason": tmpReason, "extend": tmpExtend, "user": curUser, "token": accessToken, "curLine": 0, "totLines": 0, "adStates": adStates});
+    alert("Your account does not have permission to edit catchments");
   }
 /*
   d3.select("#progBar")
@@ -1949,18 +2153,25 @@ function manualEdit(tmpForm) {
 
 
 
-//******Edit catchments using CSV file
+//******Edit catchments using Excel or CSV file
 function importEdit(tmpForm) {
   if(accessToken == "") { 
     alert("You must be logged in to make edits"); 
     return; 
   }
 
+  if(adStates == null) {
+    alert("Your account does not have permission to edit catchments");
+    return; 
+  }
+
+  d3.select("#map").style("cursor", "progress");
+
   var tmpLocate = tmpForm.codeLocID.value;
   var tmpClassify = tmpForm.codeClassify.value;
   var tmpExtend = tmpForm.codeExtend.value;
   if(tmpLocate == "coordinates") {
-    console.log(tmpForm.codeLatSel.index);
+    //console.log(tmpForm.codeLatSel.index);
     var tmpMapLat = tmpForm.codeLatSel.value;
     var tmpMapLong = tmpForm.codeLongSel.value;
   }
@@ -2145,7 +2356,7 @@ function doEdits(tmpData) {
     var newDate = new Date(lineArray[tmpFields.indexOf(tmpData.tmpDate)]);
     var tmpYear = newDate.getFullYear();
 
-    console.log({"feat": lineArray[tmpFields.indexOf(tmpData.tmpFeat)], "code": lineArray[tmpFields.indexOf(tmpData.tmpCode)], "sampDate": lineArray[tmpFields.indexOf(tmpData.tmpDate)], "sampYear": tmpYear, "reason": lineArray[tmpFields.indexOf(tmpData.tmpReason)], "extend": tmpData.tmpExtend, "user": curUser, "token": accessToken, "curLine": i, "totLines": lineCnt, "adStates": adStates});
+    //console.log({"feat": lineArray[tmpFields.indexOf(tmpData.tmpFeat)], "code": lineArray[tmpFields.indexOf(tmpData.tmpCode)], "sampDate": lineArray[tmpFields.indexOf(tmpData.tmpDate)], "sampYear": tmpYear, "reason": lineArray[tmpFields.indexOf(tmpData.tmpReason)], "extend": tmpData.tmpExtend, "user": curUser, "token": accessToken, "curLine": i, "totLines": lineCnt, "adStates": adStates});
     socket.emit("edit", {"feat": lineArray[tmpFields.indexOf(tmpData.tmpFeat)], "code": lineArray[tmpFields.indexOf(tmpData.tmpCode)], "sampDate": lineArray[tmpFields.indexOf(tmpData.tmpDate)], "sampYear": tmpYear, "reason": lineArray[tmpFields.indexOf(tmpData.tmpReason)], "extend": tmpData.tmpExtend, "user": curUser, "token": accessToken, "curLine": i, "totLines": lineCnt, "adStates": adStates});
   });
 }
@@ -2183,7 +2394,9 @@ function startIntro() {
       //3
       { element: document.querySelector("#overlaySelect"), intro: "Use this dropdown menu  to add raster and pologyon overlay layers. Here the HUC 8 polygon layer has been added." },
       //4
-      { element: document.querySelector("#panelTools"), intro: 'These icons are used to show/hide tool windows and assist with manuevering around the map:<ul><li><span class="fa fa-th-list intro-fa"></span> Show/hide map legend window</li><li><span class="fa fa-info intro-fa"></span> Show/hide feature identification window</li><li><span class="fa fa-pencil-square intro-fa"></span> Show/hide Catchment Updater window</li><li><span class="fa fa-search intro-fa"></span> Show/hide map location search window</li><li><span class="fa fa-globe intro-fa"></span> Zoom to full-extent of the map</li></ul>' },
+      { element: document.querySelector("#panelTools"), intro: 'These icons are used to show/hide tool windows and assist with manuevering around the map:<ul><li><span class="fa fa-th-list intro-fa"></span> Show/hide map legend window</li><li><span class="fa fa-info intro-fa"></span> Show/hide feature identification window</li><li><span class="fa fa-pencil-square intro-fa"></span> Show/hide Catchment Updater window</li><li><span class="fa fa-table intro-fa"></span> Show/hide Recent Edits window</li><li><span class="fa fa-search intro-fa"></span> Show/hide map location search window</li><li><span class="fa fa-globe intro-fa"></span> Zoom to full-extent of the map</li></ul>' },
+      //5
+      { intro: 'Thank you for touring the <span style="font-family:nebulous;color:orangered;font-weight:bold;">EBTJV Catchment Updater</span>!<img src="images/ebtjv_icon.png" style="height:50px;display:block;margin:auto;"></img>Questions or comments can be directed to <a href="mailto:jason_coombs@fws.gov?subject=EBTJV Catchment Updater" target="_blank">Jason Coombs</a>.' },
 /*
       //5
       { element: document.querySelector("#legendDiv"), intro: "The legend window provides the user with:<ul><li>A legend key for each layer</li><li>A slider to change the opacity of the layer (here it is shown at 50%)</li><li>The ability to change the layer order on the map by dragging and dropping</li></ul>" },
@@ -2197,8 +2410,6 @@ function startIntro() {
       { element: document.querySelector("#printControl"), intro: "The print icon enables the user to save an image of the screen to a PDF file." },
       //10
       { element: document.querySelector("#showDetails"), intro: "The 'About' link opens a window providing information about the tool, and details and download links for the raster and polygon layers used by the tool." },
-      //11
-      { intro: 'Thank you for touring the <span style="font-family:nebulous;color:orangered;font-weight:bold;">EBTJV Catchment Updater</span>!<img src="images/tree_icon.png" style="height:70px;display:block;margin:auto;"></img>Questions or comments can be directed to <a href="mailto:jcoombs@umass.edu?subject=EBTJV Catchment Updater" target="_blank">Jason Coombs</a>.' },
 */
     ],
     tooltipPosition: 'auto',
@@ -2422,7 +2633,13 @@ function getConfirmCSV() {
           if(i == 0) { 
             tmpCSV += this.innerHTML; 
           } 
-          else if(i < 6) { 
+          else if(i == 2) { 
+            tmpCSV += ", New Code"; 
+          } 
+          else if(i == 4) {
+            tmpCSV += ", Note";
+          }
+          else if(i < 7) { 
             tmpCSV += "," + this.innerHTML; 
           } 
         });
@@ -2433,12 +2650,28 @@ function getConfirmCSV() {
           if(i == 0) { 
             tmpCSV += this.innerHTML; 
           } 
+          else if(i == 2) {
+            tmpCSV += ", " + d3.select(this).select("input").property("value");
+          }
           else if(i == 4) {
-            var tmpTitle = "";
-            if(this.innerHTML != "") { tmpTitle = d3.select(this).select("span").property("title").replace("<p>", "").replace("</p>", ""); }
-            tmpCSV += "," + tmpTitle;
+            var tmpTitle = d3.select(this).select("span").attr("data-original-title");
+            if(tmpTitle != null) { tmpTitle.replace("Add comment for record",""); }
+            tmpCSV += ',' + tmpTitle;
           }
           else if(i == 5) {
+            var tmpTitle = "";
+            if(this.innerHTML != "") { 
+              tmpTitle = d3.select(this).select("span").attr("data-original-title");
+              if(tmpTitle != null) { 
+                tmpTitle = tmpTitle.replace("<p>","").replace("</p>","");
+              }
+              else {
+                tmpTitle = "";
+              }
+            }
+            tmpCSV += "," + tmpTitle;
+          }
+          else if(i == 6) {
             if(d3.select(this).select("span").classed("fa-check-square") == true) {
               tmpCSV += ", Yes";
             }
@@ -2446,7 +2679,7 @@ function getConfirmCSV() {
               tmpCSV += ", No";
             }
           }
-          else if(i < 5) { 
+          else if(i < 7) { 
             tmpCSV += "," + this.innerHTML; 
           } 
         });
@@ -2456,4 +2689,10 @@ function getConfirmCSV() {
   });
 
   d3.select("#confirmDownloadA").attr("href", "data:attachment/csv," + encodeURIComponent(tmpCSV));
+}
+
+
+//******Required callback function for Google maps API
+function googleLoaded() {
+  console.log("Google maps loaded!");
 }
